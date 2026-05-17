@@ -1,0 +1,14 @@
+<Project>
+  <PropertyGroup>
+  <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+  <CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled>
+  </PropertyGroup>
+  <ItemGroup>
+  <!--
+  Package versions live here. Add a <PackageVersion> entry the moment a new
+  package is referenced anywhere in the solution. Group entries by purpose
+  (test runners, observability, wolverine, etc.) with a comment heading per
+  group as the solution grows.
+  -->
+  </ItemGroup>
+</Project>
