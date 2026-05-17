@@ -1,30 +1,32 @@
 <Project>
   <PropertyGroup>
-  <!-- Language and runtime defaults -->
-  <LangVersion>latest</LangVersion>
-  <Nullable>enable</Nullable>
-  <ImplicitUsings>enable</ImplicitUsings>
-  
-  <!-- Treat every warning as an error. Ruthless on purpose. -->
-  <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
-  
-  <!-- Analyzer setup -->
-  <AnalysisLevel>latest-Recommended</AnalysisLevel>
-  <AnalysisMode>AllEnabledByDefault</AnalysisMode>
-  <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
-  
-  <!-- Build reproducibility -->
-  <Deterministic>true</Deterministic>
-  <ContinuousIntegrationBuild Condition="'$(GITHUB_ACTIONS)' == 'true'">true</ContinuousIntegrationBuild>
-  
-  <!-- Symbol packages: source-link friendly defaults -->
-  <PublishRepositoryUrl>true</PublishRepositoryUrl>
-  <EmbedUntrackedSources>true</EmbedUntrackedSources>
-  <IncludeSymbols>true</IncludeSymbols>
-  <SymbolPackageFormat>snupkg</SymbolPackageFormat>
-  
-  <!-- Generate XML doc files; CS1591 (missing XML comment) will surface
+    <!-- Language and runtime defaults -->
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+
+    <!-- Treat every warning as an error. Ruthless on purpose. -->
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+
+    <!-- Analyzer setup -->
+    <AnalysisLevel>latest-Recommended</AnalysisLevel>
+    <AnalysisMode>AllEnabledByDefault</AnalysisMode>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+
+    <!-- Build reproducibility -->
+    <Deterministic>true</Deterministic>
+    <ContinuousIntegrationBuild Condition="'$(GITHUB_ACTIONS)' == 'true'"
+      >true</ContinuousIntegrationBuild
+    >
+
+    <!-- Symbol packages: source-link friendly defaults -->
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+
+    <!-- Generate XML doc files; CS1591 (missing XML comment) will surface
   missing comments on public APIs, which is exactly what we want. -->
-  <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
   </PropertyGroup>
 </Project>
