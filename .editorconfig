@@ -1,0 +1,108 @@
+# CurrencyTracker — repo-wide style and analyzer policy.
+# Read by editors, by Roslyn analyzers (because EnforceCodeStyleInBuild=true),
+# and by `dotnet format`. Disabling a rule here disables it everywhere.
+
+root = true
+
+###############################
+# Defaults for every file
+###############################
+[*]
+charset                  = utf-8
+end_of_line              = lf
+insert_final_newline     = true
+trim_trailing_whitespace = true
+indent_style             = space
+indent_size              = 4
+
+# Two-space indent for markup / config formats
+[*.{json,jsonc,yml,yaml,xml,csproj,props,targets,config,nuspec,xaml}]
+indent_size              = 2
+
+# Markdown: don't trim trailing whitespace (line-break is two spaces)
+[*.md]
+trim_trailing_whitespace = false
+indent_size              = 2
+
+###############################
+# C# files
+###############################
+[*.cs]
+
+#----- Layout
+csharp_indent_case_contents               = true
+csharp_indent_switch_labels               = true
+csharp_new_line_before_open_brace         = all
+csharp_new_line_before_else               = true
+csharp_new_line_before_catch              = true
+csharp_new_line_before_finally            = true
+csharp_new_line_between_query_clauses     = true
+
+#----- Namespaces and usings
+csharp_style_namespace_declarations           = file_scoped:error
+csharp_using_directive_placement              = outside_namespace:warning
+dotnet_sort_system_directives_first           = true
+dotnet_separate_import_directive_groups       = false
+
+#----- `var` policy
+csharp_style_var_for_built_in_types           = false:warning
+csharp_style_var_when_type_is_apparent        = true:warning
+csharp_style_var_elsewhere                    = false:warning
+
+#----- Expression-bodied members
+csharp_style_expression_bodied_methods        = when_on_single_line:suggestion
+csharp_style_expression_bodied_constructors   = false:silent
+csharp_style_expression_bodied_operators      = when_on_single_line:suggestion
+csharp_style_expression_bodied_properties     = when_on_single_line:suggestion
+csharp_style_expression_bodied_indexers       = when_on_single_line:suggestion
+csharp_style_expression_bodied_accessors      = when_on_single_line:suggestion
+
+#----- `this.` prefix — never required
+dotnet_style_qualification_for_field          = false:warning
+dotnet_style_qualification_for_property       = false:warning
+dotnet_style_qualification_for_method         = false:warning
+dotnet_style_qualification_for_event          = false:warning
+
+#----- Pattern matching, target-typed new, modern idioms
+csharp_style_pattern_matching_over_is_with_cast_check  = true:warning
+csharp_style_pattern_matching_over_as_with_null_check  = true:warning
+csharp_style_inlined_variable_declaration              = true:warning
+csharp_style_implicit_object_creation_when_type_is_apparent = true:suggestion
+csharp_prefer_simple_using_statement                   = true:suggestion
+
+#----- Readonly fields
+dotnet_style_readonly_field                  = true:warning
+
+#----- Async / cancellation
+# Async methods must take CancellationToken (no default value) — enforced
+# by code review for now; in Phase 5 we add a Roslynator rule.
+# CA2007 (ConfigureAwait): application code, no synchronisation context to
+# deadlock on, so this would be pure ceremony.
+dotnet_diagnostic.CA2007.severity            = none
+
+#----- Things that should fail the build
+dotnet_diagnostic.IDE0005.severity           = warning   # unused using directive
+dotnet_diagnostic.IDE0044.severity           = warning   # make field readonly
+dotnet_diagnostic.IDE0051.severity           = warning   # remove unused private member
+dotnet_diagnostic.IDE0052.severity           = warning   # remove unread private member
+dotnet_diagnostic.CA1062.severity            = error     # validate public args for null
+dotnet_diagnostic.CA1816.severity            = error     # dispose pattern
+dotnet_diagnostic.CA1849.severity            = error     # call async when in async context
+dotnet_diagnostic.CA2016.severity            = error     # forward CancellationToken
+dotnet_diagnostic.CS1591.severity            = error     # missing XML doc on public member
+
+#----- File header — none required yet. ADR 0003 (in Phase 0.B) may add an SPDX header.
+dotnet_diagnostic.IDE0073.severity           = none
+file_header_template                          = unset
+
+###############################
+# Test files — relaxed XML-doc requirement
+###############################
+[**/{tests,test}/**/*.cs]
+dotnet_diagnostic.CS1591.severity            = none
+
+###############################
+# Generated code — opt out of everything
+###############################
+[**/*.{Designer,g,g.i}.cs]
+generated_code                                = true
