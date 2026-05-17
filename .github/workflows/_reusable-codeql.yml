@@ -1,0 +1,51 @@
+name: _reusable-codeql
+
+# This workflow is a library. It is called by other workflows via `jobs.X.uses:`.
+# It is intentionally NOT triggered by push/PR/dispatch — see Phase 0.16 playbook.
+on:
+  workflow_call:
+
+# CodeQL requires all three of these permissions:
+#   contents: read        — clone the repo
+#   security-events: write — upload SARIF to the Code Scanning API
+#   actions: read         — read workflow metadata (needed by the action)
+permissions:
+  contents: read
+  security-events: write
+  actions: read
+
+jobs:
+  codeql:
+    name: codeql
+    runs-on: ubuntu-latest
+    # 360 minutes is the CodeQL default; tighten if real runs are consistently shorter.
+    timeout-minutes: 60
+    env:
+      DOTNET_NOLOGO: true
+      DOTNET_CLI_TELEMETRY_OPTOUT: true
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+        with:
+          global-json-file: global.json
+        # Required even under build-mode: none — CodeQL invokes `dotnet restore`
+        # internally to resolve dependencies for the database. Without an SDK
+        # the resolution silently degrades and analysis accuracy drops.
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v4
+        with:
+          languages: csharp
+          build-mode: none
+          queries: security-and-quality
+          # Default CodeQL bundle (currently 2.25.4 as of May 2026); pin
+          # explicitly only if a release lands that's known-incompatible with
+          # this codebase. Auto-picks-up new C# query improvements.
+
+      - name: Perform CodeQL analysis
+        uses: github/codeql-action/analyze@v4
+        with:
+          category: '/language:csharp'
+          # `category` segments the SARIF results in the Security tab; useful
+          # later when we add a separate language (TypeScript in Phase 16).
