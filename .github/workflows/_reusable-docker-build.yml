@@ -1,0 +1,103 @@
+name: _reusable-docker-build
+
+on:
+  workflow_call:
+    inputs:
+      context:
+        description: 'Build context path, relative to repo root (e.g. ''.'' or ''src/Api'')'
+        type: string
+        required: true
+      dockerfile:
+        description: 'Path to the Dockerfile, relative to repo root'
+        type: string
+        required: false
+        default: 'Dockerfile'
+      image-name:
+        description: 'Image name (without registry prefix or tag), e.g. ''currency-tracker-api'''
+        type: string
+        required: true
+      tag:
+        description: 'Tag to apply to the built image (e.g. the commit SHA)'
+        type: string
+        required: true
+      push:
+        description: 'Whether to push the built image to the registry'
+        type: boolean
+        required: false
+        default: false
+      registry:
+        description: 'Registry hostname (e.g. ''ghcr.io'' or ''myacr.azurecr.io''). Empty means no login.'
+        type: string
+        required: false
+        default: ''
+    outputs:
+      image-digest:
+        description: 'sha256 digest of the built image'
+        value: ${{ jobs.docker.outputs.image-digest }}
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  docker:
+    name: docker-build
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    outputs:
+      image-digest: ${{ steps.build.outputs.digest }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+        # docker-container driver (the default) is required for the GHA cache
+        # backend. Don't override `driver:` here unless you also reconfigure
+        # cache-to/cache-from.
+
+      - name: Login to registry
+        if: inputs.push && inputs.registry != ''
+        uses: docker/login-action@v4
+        with:
+          registry: ${{ inputs.registry }}
+          # GHCR uses the workflow's GITHUB_TOKEN; other registries get their
+          # credentials injected by the caller via env or secrets. Today the
+          # only consumer that sets `push: true` will be Phase 14's main-ci,
+          # and it injects ACR credentials via OIDC.
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+        # Note: secrets.GITHUB_TOKEN is available to any reusable workflow
+        # without `secrets: inherit` — it's an automatic context value, not
+        # a user-defined secret.
+
+      - name: Extract image metadata
+        id: meta
+        uses: docker/metadata-action@v6
+        with:
+          images: |
+            ${{ inputs.registry != '' && format('{0}/{1}', inputs.registry, inputs.image-name) || inputs.image-name }}
+          tags: |
+            type=raw,value=${{ inputs.tag }}
+            type=sha,format=short
+
+      - name: Build and (optionally) push image
+        id: build
+        uses: docker/build-push-action@v7
+        with:
+          context: ${{ inputs.context }}
+          file: ${{ inputs.dockerfile }}
+          push: ${{ inputs.push }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          annotations: ${{ steps.meta.outputs.annotations }}
+          # GHA cache backend, scoped per image-name to prevent cross-image
+          # pollution. `mode=max` exports every intermediate layer, not just
+          # the final ones — needed for multi-stage Dockerfile caching.
+          cache-from: type=gha,scope=${{ inputs.image-name }}
+          cache-to: type=gha,scope=${{ inputs.image-name }},mode=max
+          # Provenance + SBOM attestations are best-practice for supply chain
+          # (cf. SLSA Level 2). They add ~5s to the build; enable them.
+          provenance: true
+          sbom: true
