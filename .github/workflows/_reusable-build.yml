@@ -1,0 +1,88 @@
+name: _reusable-build
+
+# This workflow is a library. It is called by other workflows via `jobs.X.uses:`.
+# It is intentionally NOT triggered by push/PR/dispatch — see Phase 0.C playbook.
+on:
+  workflow_call:
+    inputs:
+      configuration:
+        description: 'MSBuild configuration (Debug | Release)'
+        type: string
+        required: false
+        default: 'Release'
+      dotnet-version:
+        description: '.NET SDK version selector, e.g. ''10.0.x''. Defaults to global.json.'
+        type: string
+        required: false
+        default: ''
+      os:
+        description: 'Runner OS (ubuntu-latest | windows-latest)'
+        type: string
+        required: true
+    outputs:
+      artifact-name:
+        description: 'Name of the uploaded build-output artifact'
+        value: ${{ jobs.build.outputs.artifact-name }}
+
+# Minimal permissions: reusable workflows should not silently grant scope to callers.
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: build
+    runs-on: ${{ inputs.os }}
+    timeout-minutes: 15
+    env:
+      # Pin NuGet's package directory to the workspace so cache-restore is deterministic
+      # across runners and configurations.
+      NUGET_PACKAGES: ${{ github.workspace }}/.nuget/packages
+      DOTNET_NOLOGO: true
+      DOTNET_CLI_TELEMETRY_OPTOUT: true
+    outputs:
+      artifact-name: ${{ steps.set-artifact-name.outputs.name }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Setup .NET SDK
+        id: setup-dotnet
+        uses: actions/setup-dotnet@v5
+        with:
+          # If `dotnet-version` is left empty, setup-dotnet reads global.json
+          # (added in Phase 0.1). Pinning the SDK in two places would risk drift.
+          dotnet-version: ${{ inputs.dotnet-version }}
+          global-json-file: ${{ inputs.dotnet-version == '' && 'global.json' || '' }}
+          cache: true
+          cache-dependency-path: '**/packages.lock.json'
+
+      - name: Compute artifact name
+        id: set-artifact-name
+        shell: bash
+        run: |
+          echo "name=build-${{ inputs.os }}-${{ inputs.configuration }}" >> "$GITHUB_OUTPUT"
+
+      - name: Restore (locked mode)
+        run: dotnet restore --locked-mode
+        # `--locked-mode` fails the build if any package would resolve to a version
+        # other than the one in packages.lock.json. This is what makes the lock file
+        # actually enforce reproducibility.
+
+      - name: Build
+        run: dotnet build -c ${{ inputs.configuration }} --no-restore
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ steps.set-artifact-name.outputs.name }}
+          # Upload every project's bin/<configuration>/ folder, but skip the obj/
+          # intermediates (they make the artifact 3–4x larger and the test job
+          # rebuilds them anyway from `--no-build` metadata).
+          path: |
+            **/bin/${{ inputs.configuration }}/
+            !**/bin/${{ inputs.configuration }}/**/ref/
+          retention-days: 1
+          if-no-files-found: warn
+          # Allows the same matrix leg to upload twice in a re-run.
+          overwrite: true
