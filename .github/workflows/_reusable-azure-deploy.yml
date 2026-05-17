@@ -1,0 +1,79 @@
+name: _reusable-azure-deploy
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        description: 'GitHub Environment to deploy into (uat | prod)'
+        type: string
+        required: true
+      image-tag:
+        description: 'Container image tag to deploy (e.g. the commit SHA)'
+        type: string
+        required: true
+    # NOTE: this reusable is called with `secrets: inherit` (see Phase 0.D's
+    # deploy-uat.yml / deploy-prod.yml). Per-secret declarations are NOT
+    # listed here — the audit surface lives in the GitHub Environment
+    # configuration (Settings → Environments → uat | prod), not in this file.
+
+permissions:
+  id-token: write   # required for OIDC federation
+  contents: read
+
+jobs:
+  deploy:
+    name: deploy
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    # Declaring the environment HERE (on the job, not the workflow) is what
+    # activates the GitHub Environment's protection rules — required-reviewer
+    # gate, deployment branch restrictions, wait timer. See Phase 0.30.
+    environment: ${{ inputs.environment }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Azure login (OIDC)
+        uses: azure/login@v3
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Azure CLI smoke test
+        uses: azure/cli@v2
+        with:
+          azcliversion: latest
+          inlineScript: |
+            set -euo pipefail
+            echo "Smoke-testing Azure CLI access for environment: ${{ inputs.environment }}"
+            echo "Image tag (will be deployed from Phase 14 onwards): ${{ inputs.image-tag }}"
+            az account show --output table
+            az group list --query "[?tags.environment=='${{ inputs.environment }}'].{name:name, location:location}" --output table || true
+            echo "Smoke test passed."
+
+      # =========================================================================
+      # PHASE 14 INSERTION POINT
+      #
+      # The real deploy implementation arrives in Phase 14:
+      #
+      #   14.27 — call _reusable-terraform.yml (apply: true) before this step
+      #   14.30 — update Container App revision with `az containerapp update`
+      #             --image $ACR_NAME.azurecr.io/$IMAGE_NAME:${{ inputs.image-tag }}
+      #   14.32 — post-deploy health probe against the new revision's FQDN
+      #
+      # The smoke-test step above is REMOVED in 14.27. Do not extend this stub
+      # with intermediate "while we wait for Phase 14" steps — extending in
+      # place means the Phase 14 PR's diff is unreadable. Replace wholesale.
+      # =========================================================================
+
+      - name: Upload deploy summary
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: deploy-summary-${{ inputs.environment }}-${{ inputs.image-tag }}
+          path: |
+            ${{ runner.temp }}/deploy-summary.txt
+          if-no-files-found: ignore
+          retention-days: 30
