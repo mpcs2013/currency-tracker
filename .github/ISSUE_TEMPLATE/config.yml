@@ -1,0 +1,21 @@
+# Controls the "New issue" template chooser.
+#
+# `blank_issues_enabled: false` removes the "Open a blank issue" link at the
+# bottom of the chooser. Every issue must use a template — closes the
+# easiest path for low-quality issue creation.
+#
+# `contact_links` adds entries at the top of the chooser that link OUT of the
+# new-issue flow. The security advisory link routes a private security
+# vulnerability report into GitHub's coordinated-disclosure flow instead of
+# a public issue.
+
+blank_issues_enabled: false
+
+contact_links:
+  - name: 🔒 Report a security vulnerability privately
+    url: https://github.com/mpcs2013/currency-tracker/security/advisories/new
+    about: >
+      Do NOT open a public issue for a security vulnerability. Use this
+      private advisory channel — maintainers receive it without any
+      indexing, fix it in a private fork, and coordinate public disclosure
+      after the fix ships.
