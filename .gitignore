@@ -427,3 +427,50 @@ FodyWeavers.xsd
 *.msix
 *.msm
 *.msp
+
+
+
+###############################
+# Currency Tracker — additions
+###############################
+
+# JetBrains IDE files (Rider, ReSharper)
+.idea/
+
+# VS Code workspace files (we may un-ignore specific shared settings later
+# under .vscode/launch.json once we have something to share)
+.vscode/
+
+# User-specific MSBuild files (already in template, but explicit)
+*.user
+
+# Test results and coverage reports
+coverage/
+TestResults/
+*.trx
+*.coverage
+*.coveragexml
+*.opencover.xml
+
+# Local secrets and environment files
+.env
+.env.*
+appsettings.*.local.json
+appsettings.Development.local.json
+
+# Local persistence state (Azurite, Postgres test containers, etc.)
+__azurite/
+.azurite/
+*.azurite.json
+
+# Wolverine local databases (Phase 5+)
+*.db
+*.db-journal
+
+# OS detritus
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Coverage from CI — explicitly checked in nowhere, generated everywhere
+*.cobertura.xml

@@ -1,0 +1,58 @@
+# CurrencyTracker — line-ending and binary policy.
+# Normalise text files to LF on commit. Editors should be configured to write
+# LF too (see .editorconfig: end_of_line = lf).
+
+* text=auto eol=lf
+
+# Explicit text files (belt + braces with the auto rule above)
+*.cs        text eol=lf diff=csharp
+*.csproj    text eol=lf
+*.sln       text eol=lf
+*.slnx      text eol=lf
+*.props     text eol=lf
+*.targets   text eol=lf
+*.json      text eol=lf
+*.jsonc     text eol=lf
+*.yml       text eol=lf
+*.yaml      text eol=lf
+*.md        text eol=lf
+*.html      text eol=lf
+*.css       text eol=lf
+*.scss      text eol=lf
+*.ts        text eol=lf
+*.tsx       text eol=lf
+*.js        text eol=lf
+*.jsx       text eol=lf
+*.sh        text eol=lf
+*.editorconfig text eol=lf
+*.gitignore    text eol=lf
+*.gitattributes text eol=lf
+
+# Windows-native scripts — keep CRLF
+*.cmd       text eol=crlf
+*.bat       text eol=crlf
+*.ps1       text eol=crlf
+
+# Binaries — never diff, never normalise
+*.png       binary
+*.jpg       binary
+*.jpeg      binary
+*.gif       binary
+*.ico       binary
+*.svg       text eol=lf
+*.pdf       binary
+*.zip       binary
+*.gz        binary
+*.tar       binary
+*.7z        binary
+*.dll       binary
+*.exe       binary
+*.pdb       binary
+*.snk       binary
+*.pfx       binary
+
+# Help GitHub's linguist stats — count *.cs as C#, not generated
+*.cs        linguist-detectable=true
+*.Designer.cs linguist-generated=true
+*.g.cs      linguist-generated=true
+*.g.i.cs    linguist-generated=true
