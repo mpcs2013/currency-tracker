@@ -1,0 +1,46 @@
+name: _reusable-codeql
+
+# This workflow is a library. It is called by other workflows via `jobs.X.uses:`.
+# It is intentionally NOT triggered by push/PR/dispatch — see Phase 0.16 playbook.
+on:
+  workflow_call:
+
+# CodeQL requires all three of these permissions:
+#   contents: read        — clone the repo
+#   security-events: write — upload SARIF to the Code Scanning API
+#   actions: read         — read workflow metadata (needed by the action)
+permissions:
+  contents: read
+  security-events: write
+  actions: read
+
+jobs:
+  codeql:
+    name: codeql
+    runs-on: ubuntu-latest
+    # 360 minutes is the CodeQL default; tighten if real runs are consistently shorter.
+    timeout-minutes: 360
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v4
+        with:
+          languages: csharp
+          build-mode: none
+          queries: security-and-quality
+
+      # setup-dotnet is required under build-mode: none so that CodeQL's
+      # dependency resolution can locate the .NET SDK and NuGet packages.
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v5
+        with:
+          # Let setup-dotnet read global.json so the SDK version is pinned in one place.
+          global-json-file: global.json
+
+      - name: Analyze
+        uses: github/codeql-action/analyze@v4
+        with:
+          category: /language:csharp
