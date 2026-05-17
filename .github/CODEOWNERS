@@ -1,0 +1,40 @@
+# CurrencyTracker — code-owner routing.
+#
+# Each line maps a glob pattern to one or more owners (GitHub handles or
+# team slugs). When a PR touches a matching path, the listed owners are
+# auto-requested as reviewers. With branch protection's "Require review
+# from code owners" on (enabled in 0.29), merge is blocked until at least
+# one listed owner approves.
+#
+# Order matters: the LAST matching line wins. Catch-all `*` goes FIRST,
+# then more specific patterns can override it.
+#
+# Today the maintainer is the sole owner. Per-directory stanzas are kept
+# so re-assignment (when a teammate joins) is a one-line edit, not a
+# restructure.
+
+# Catch-all: every path defaults to the maintainer.
+*                                @mpcs2013
+
+# Application source — Clean Architecture layers (added from Phase 2).
+/src/Domain/                     @mpcs2013
+/src/Application/                @mpcs2013
+/src/Infrastructure/             @mpcs2013
+/src/Api/                        @mpcs2013
+/src/Worker/                     @mpcs2013
+/src/AppHost/                    @mpcs2013
+
+# Tests — kept structurally separate from src/.
+/tests/                          @mpcs2013
+
+# Infrastructure as code (added from Phase 14).
+/infra/terraform/                @mpcs2013
+
+# CI/CD and repo metadata (added from Phase 0.C onwards).
+/.github/                        @mpcs2013
+
+# Documentation, ADRs, runbooks.
+/docs/                           @mpcs2013
+
+# Frontend (added in Phase 16).
+/web/                            @mpcs2013
