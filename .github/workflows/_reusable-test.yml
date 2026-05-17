@@ -1,0 +1,159 @@
+name: _reusable-test
+
+on:
+  workflow_call:
+    inputs:
+      configuration:
+        description: 'MSBuild configuration (Debug | Release)'
+        type: string
+        required: false
+        default: 'Release'
+      dotnet-version:
+        description: '.NET SDK version selector. Defaults to global.json.'
+        type: string
+        required: false
+        default: ''
+      os:
+        description: 'Runner OS (ubuntu-latest | windows-latest)'
+        type: string
+        required: true
+      coverage-threshold:
+        description: 'Minimum line-coverage percentage (0–100). Default 70.'
+        type: number
+        required: false
+        default: 70
+      build-artifact-name:
+        description: 'Name of the build artifact produced by _reusable-build.yml'
+        type: string
+        required: true
+
+permissions:
+  contents: read
+  checks: write
+
+jobs:
+  test:
+    name: test
+    runs-on: ${{ inputs.os }}
+    timeout-minutes: 20
+    env:
+      DOTNET_NOLOGO: true
+      DOTNET_CLI_TELEMETRY_OPTOUT: true
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: ${{ inputs.dotnet-version }}
+          global-json-file: ${{ inputs.dotnet-version == '' && 'global.json' || '' }}
+          # No cache here: test doesn't restore packages — the build artifact
+          # carries the compiled binaries plus restored runtime assets.
+
+      - name: Download build artifact
+        uses: actions/download-artifact@v8
+        with:
+          name: ${{ inputs.build-artifact-name }}
+          # path defaults to ${{ github.workspace }}; we want the bin/ layout
+          # to land alongside the source checkout, so leave it unset.
+
+      - name: Run tests
+        id: dotnet-test
+        run: |
+          dotnet test \
+            -c ${{ inputs.configuration }} \
+            --no-build \
+            --logger "trx;LogFileName=test-results.trx" \
+            --collect:"XPlat Code Coverage" \
+            --results-directory TestResults
+        shell: bash
+        # Note: `dotnet test` exits non-zero on any test failure. We DO want
+        # that to fail the step (a failed test is a hard fail); we just want
+        # the upload steps below to still run via `if: always()`.
+
+      - name: Upload TRX test results
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: test-results-${{ inputs.os }}
+          path: TestResults/**/*.trx
+          retention-days: 7
+          if-no-files-found: ignore  # tolerate empty test runs in Phase 0–2
+          overwrite: true
+
+      - name: Upload Cobertura coverage
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: coverage-${{ inputs.os }}
+          path: TestResults/**/coverage.cobertura.xml
+          retention-days: 7
+          if-no-files-found: ignore
+          overwrite: true
+
+      - name: Coverage gate
+        if: always()
+        shell: bash
+        env:
+          THRESHOLD: ${{ inputs.coverage-threshold }}
+        run: |
+          set -euo pipefail
+
+          # Find every coverage.cobertura.xml the test run produced.
+          shopt -s globstar nullglob
+          files=(TestResults/**/coverage.cobertura.xml)
+
+          if [[ ${#files[@]} -eq 0 ]]; then
+            echo "::notice::No coverage data produced (likely zero test projects). Skipping coverage gate."
+            {
+              echo "### Coverage gate"
+              echo ""
+              echo "_No \`coverage.cobertura.xml\` files were produced. Threshold check skipped._"
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          # Cobertura's root <coverage line-rate="0.7642" ...> attribute is the
+          # line coverage as a fraction. Sum across files (weighted by lines
+          # would be ideal; for one or two files, mean-of-rates is close enough
+          # and simpler to compute in pure bash).
+          total=0
+          count=0
+          for f in "${files[@]}"; do
+            rate=$(grep -oE 'line-rate="[0-9.]+"' "$f" | head -1 | sed 's/line-rate="//;s/"//')
+            # Multiply by 10000 and use integer maths to avoid bc/awk dependencies.
+            scaled=$(printf '%.0f' "$(echo "$rate * 10000" | awk '{print $1*$3}')" 2>/dev/null || awk -v r="$rate" 'BEGIN{printf "%d", r*10000}')
+            total=$((total + scaled))
+            count=$((count + 1))
+          done
+
+          # Mean line-coverage as an integer percent ×100 (e.g. 7642 = 76.42 %).
+          mean=$((total / count))
+          mean_pct_int=$((mean / 100))
+          mean_pct_frac=$((mean % 100))
+          mean_str=$(printf '%d.%02d' "$mean_pct_int" "$mean_pct_frac")
+
+          threshold_int=$((THRESHOLD * 100))
+
+          {
+            echo "### Coverage gate"
+            echo ""
+            echo "| Metric         | Value           |"
+            echo "| -------------- | --------------- |"
+            echo "| Line coverage  | ${mean_str} %   |"
+            echo "| Threshold      | ${THRESHOLD} %  |"
+            echo "| Files analysed | ${count}        |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          if [[ $mean -lt $threshold_int ]]; then
+            echo "::error::Line coverage ${mean_str} % is below threshold ${THRESHOLD} %."
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo "**Result:** ❌ below threshold" >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          else
+            echo "Line coverage ${mean_str} % meets threshold ${THRESHOLD} %."
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo "**Result:** ✅ meets threshold" >> "$GITHUB_STEP_SUMMARY"
+          fi
