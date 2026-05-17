@@ -1,0 +1,71 @@
+name: _reusable-format
+
+# This workflow is a library. It is called by other workflows via `jobs.X.uses:`.
+# It is intentionally NOT triggered by push/PR/dispatch — see Phase 0.C playbook.
+on:
+  workflow_call:
+
+# Minimal permissions: format verification only needs to read the source tree.
+permissions:
+  contents: read
+
+jobs:
+  format:
+    name: format
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      DOTNET_NOLOGO: true
+      DOTNET_CLI_TELEMETRY_OPTOUT: true
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v5
+        with:
+          # No dotnet-version override — let setup-dotnet read global.json so the
+          # SDK is pinned in exactly one place.
+          global-json-file: global.json
+
+      - name: Restore .NET local tools
+        run: dotnet tool restore
+
+      - name: dotnet format (verify no changes)
+        id: dotnet-format
+        shell: bash
+        run: |
+          set +e
+          output=$(dotnet format --verify-no-changes --severity error 2>&1)
+          exit_code=$?
+          echo "$output"
+          if [[ $exit_code -ne 0 ]]; then
+            {
+              echo "### ❌ \`dotnet format\` found formatting issues"
+              echo ""
+              echo '```'
+              echo "$output"
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit $exit_code
+          fi
+
+      - name: csharpier check
+        id: csharpier
+        shell: bash
+        run: |
+          set +e
+          output=$(dotnet csharpier check . 2>&1)
+          exit_code=$?
+          echo "$output"
+          if [[ $exit_code -ne 0 ]]; then
+            {
+              echo "### ❌ \`csharpier\` found formatting issues"
+              echo ""
+              echo '```'
+              echo "$output"
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit $exit_code
+          fi
