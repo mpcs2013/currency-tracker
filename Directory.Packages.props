@@ -1,0 +1,13 @@
+<Project>
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+    <CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled>
+    <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
+    <RestoreLockedMode
+      Condition="'$(GITHUB_ACTIONS)' == 'true' or '$(ContinuousIntegrationBuild)' == 'true'"
+      >true</RestoreLockedMode>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- Intentionally empty in Phase 0: add PackageVersion entries when first referenced by a project. -->
+  </ItemGroup>
+</Project>

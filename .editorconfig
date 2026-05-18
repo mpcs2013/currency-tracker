@@ -1,0 +1,30 @@
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+indent_style = space
+trim_trailing_whitespace = true
+
+[*.{cs,csproj,props,targets}]
+indent_size = 4
+
+[*.{json,yml,yaml,md}]
+indent_size = 2
+
+[*.cs]
+# Code style preferences (enforced by `dotnet format`)
+csharp_style_namespace_declarations = file_scoped:error
+csharp_style_var_for_built_in_types = false:suggestion
+csharp_style_var_when_type_is_apparent = true:suggestion
+csharp_prefer_braces = true:warning
+
+# Analyzer severities (override the defaults that ship with the SDK)
+dotnet_diagnostic.CA1707.severity = none      # Underscores in identifiers (xUnit test method names)
+dotnet_diagnostic.CA2007.severity = none      # ConfigureAwait — not needed in app code
+dotnet_diagnostic.IDE0058.severity = none     # Expression-value-not-used — too noisy
+
+# Sort `using` directives
+dotnet_sort_system_directives_first = true
+dotnet_separate_import_directive_groups = false
