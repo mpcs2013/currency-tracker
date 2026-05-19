@@ -31,4 +31,4 @@ gh auth status              # authenticated
 
 ## Licence
 
-MIT (see `LICENSE`).
+Apache License 2.0 (see `LICENSE`).
