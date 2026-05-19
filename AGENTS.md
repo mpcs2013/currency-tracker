@@ -1,4 +1,4 @@
-# AGENTS.md
+# AGENTS.md 
 
 This file is the canonical project memory for AI agent sessions. Read it before
 touching any other file. Update it whenever you discover a convention this
