@@ -1,0 +1,73 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  ci:
+    name: ci
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          global-json-file: global.json
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('**/packages.lock.json', 'Directory.Packages.props') }}
+          restore-keys: |
+            nuget-${{ runner.os }}-
+
+      - name: Detect C# sources
+        id: detect
+        run: |
+          if find . -name '*.cs' -not -path './.git/*' | grep -q .; then
+            echo "has_csharp=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_csharp=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::No C# sources yet — skipping restore/build/test."
+          fi
+
+      - name: Install CSharpier
+        if: steps.detect.outputs.has_csharp == 'true'
+        run: dotnet tool install -g csharpier
+
+      - name: CSharpier check
+        if: steps.detect.outputs.has_csharp == 'true'
+        run: csharpier --check .
+
+      - name: Format check
+        if: steps.detect.outputs.has_csharp == 'true'
+        run: dotnet format --verify-no-changes --no-restore
+
+      - name: Restore
+        if: steps.detect.outputs.has_csharp == 'true'
+        run: dotnet restore --locked-mode
+
+      - name: Build
+        if: steps.detect.outputs.has_csharp == 'true'
+        run: dotnet build --configuration Release --no-restore
+
+      - name: Test
+        if: steps.detect.outputs.has_csharp == 'true'
+        run: dotnet test --configuration Release --no-build --logger "trx;LogFileName=test-results.trx"
