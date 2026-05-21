@@ -76,6 +76,57 @@ expose. If a future PR wants to add a third `Yes` (e.g. a CLI tool, a
 gRPC host, a Functions app), that's an ADR-worthy decision — the
 current pipeline assumes exactly two.
 
+## Testing conventions
+
+`tests/` holds three classes of test project. **Unit tests** under
+`tests/CurrencyTracker.Domain.UnitTests` and
+`tests/CurrencyTracker.Application.UnitTests` exercise pure code paths
+in-memory and run in milliseconds per test. **Integration tests** under
+`tests/CurrencyTracker.Infrastructure.IntegrationTests` (lands Phase 8)
+and `tests/CurrencyTracker.Api.IntegrationTests` (lands Phase 9) spin
+up real PostgreSQL and Redis containers via Testcontainers and run on
+the order of seconds per test. **Architecture tests** under
+`tests/CurrencyTracker.Architecture.Tests` inspect compiled IL via
+`NetArchTest.Rules` and enforce the dependency-direction contract
+named in **Project layout** above.
+
+| Project                                         | Style                              | Discovers tests via       | Lands in phase |
+| ----------------------------------------------- | ---------------------------------- | ------------------------- | -------------- |
+| CurrencyTracker.Domain.UnitTests                | xUnit v3 + FluentAssertions        | MTP v1 (template default) | 2.7            |
+| CurrencyTracker.Application.UnitTests           | xUnit v3 + FluentAssertions + NSub | MTP v1 (template default) | 2.7            |
+| CurrencyTracker.Architecture.Tests              | xUnit v3 + NetArchTest.Rules       | MTP v1 (template default) | 2.8            |
+| CurrencyTracker.Infrastructure.IntegrationTests | xUnit v3 + Testcontainers          | MTP v1                    | 8.x            |
+| CurrencyTracker.Api.IntegrationTests            | xUnit v3 + Alba + Testcontainers   | MTP v1                    | 9.x            |
+
+### Test-writing rules
+
+- File-scoped namespaces in test files (same convention as `src/`).
+- `[Fact] public async Task`, never `async void`.
+- One concept per test method; AAA layout (Arrange / Act / Assert) with
+  blank lines separating the three blocks.
+- `[InlineData]` over `[MemberData]` when the data fits on one line.
+- `NSubstitute` for substitutes. No Moq, no FakeItEasy.
+- `FluentAssertions` `Should()` chains; one assertion per chain unless
+  a single `AssertionScope` deliberately batches them.
+- Each `src/` project has a single internal-only `*AssemblyAnchor` type
+  to support `NetArchTest.Rules`' `typeof(Anchor).Assembly` lookup. The
+  anchor types are empty `public sealed class`es with no members.
+
+### Test → production direction
+
+Test projects under `tests/` reference projects under `src/` (the
+inverse of the production-code direction). This is not a violation of
+the architecture contract — the contract is about `src/`-to-`src/`
+references. The architecture test in `Architecture.Tests` inspects
+only assemblies compiled from `src/`.
+
+```
+tests/Domain.UnitTests        ───▶ src/Domain
+tests/Application.UnitTests   ───▶ src/Application  (+ Domain transitively)
+tests/Architecture.Tests      ───▶ all src/ assemblies (read-only inspection)
+tests/*.IntegrationTests      ───▶ src/Infrastructure or src/Api  (Phases 8–9)
+```
+
 ## Agent principles
 
 Every agent session — whether Claude Code, Cursor, Copilot, Codex, or a
@@ -214,7 +265,11 @@ Every PR runs locally and in CI:
   every second for `worker`). Strip them in the **same PR** that runs
   `dotnet new` — don't leave them in "for now". The TreatWarningsAsErrors
   flag in `Directory.Build.props` will not catch the cruft (it compiles
-  cleanly); only a reviewer's eyes catch it.  
+  cleanly); only a reviewer's eyes catch it.
+- xUnit v3 is the version this codebase uses (3.2.2+). Copilot will frequently
+  suggest v2 idioms — `async void`, the `xunit` package instead of `xunit.v3`,
+  `[Theory(DisplayName = ...)]`. Reject every v2 borrowing; v3's analyzer
+  surfaces the rejection at build time but the diff review is faster.
 
 ## How to update this file
 
