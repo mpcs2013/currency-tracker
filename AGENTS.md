@@ -199,6 +199,8 @@ Every PR runs locally and in CI:
 
 - `actions/setup-dotnet@v6` does not exist. Current is **v5**.
   `actions/checkout` is on v6 — they have independent release cadences.
+- On .NET 10 SDK, `dotnet new sln --name <Name>` defaults to `.slnx`.
+  Use `--format sln` when a classic `.sln` file is required.
 - `setup-dotnet` reads `global.json` if `dotnet-version` is left empty. Don't
   pin a version in the workflow; let `global.json` be the single source.
 - `dotnet format` errors against an empty repo. Hence the "Detect C# sources"
