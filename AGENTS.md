@@ -30,6 +30,52 @@ Clean Architecture, strict dependency direction:
 - `Infrastructure` implements ports (EF Core, Redis, HTTP clients).
 - `Api` and `Worker` are composition roots (Aspire-orchestrated locally).
 
+## Project layout
+
+`src/` holds production code. `tests/` holds test projects (added in
+Phase 2.2). The names below are contracts: an agent that wants to call
+the Domain project `CurrencyTracker.Core`, or to add a `Shared` or
+`Common` project, should **stop and open an ADR** instead. Five layers
+is the contract for this build plan.
+
+```
+src/CurrencyTracker.Domain          ← pure C#, zero ProjectReferences,
+                                       (almost) zero PackageReferences
+
+src/CurrencyTracker.Application     ← references Domain only;
+                                       defines ports and CQRS messages
+
+src/CurrencyTracker.Infrastructure  ← references Application + Domain;
+                                       EF Core, Redis, HttpClient adapters
+
+src/CurrencyTracker.Api             ← references Infrastructure + Application
+                                       + Domain; HTTP composition root
+
+src/CurrencyTracker.Worker          ← references Infrastructure + Application
+                                       + Domain; background-job composition root
+                                       (does NOT reference Api)
+
+src/CurrencyTracker.AppHost         ← Phase 7 addition (Aspire orchestrator);
+                                       references nothing from src/ at build
+                                       time — references Api and Worker only
+                                       at run time via Aspire resources
+
+```
+
+| Project          | References                 | Outbound NuGet (Phase 2.1)       | Composition root? |
+| ---------------- | -------------------------- | -------------------------------- | ----------------- |
+| `Domain`         | (none)                     | (none)                           | No                |
+| `Application`    | `Domain`                   | (none)                           | No                |
+| `Infrastructure` | `Application`, `Domain`    | (none — Phase 8+ adds EF Core)   | No                |
+| `Api`            | `Infrastructure`, `App.`, `Dom.` | `Microsoft.AspNetCore.OpenApi` | Yes (HTTP)        |
+| `Worker`         | `Infrastructure`, `App.`, `Dom.` | (none — Phase 12 adds Wolverine) | Yes (jobs)        |
+
+**Reading the table:** `Api` and `Worker` are the only rows with **Yes**
+in the last column. That's the rule: composition roots compose, layers
+expose. If a future PR wants to add a third `Yes` (e.g. a CLI tool, a
+gRPC host, a Functions app), that's an ADR-worthy decision — the
+current pipeline assumes exactly two.
+
 ## Agent principles
 
 Every agent session — whether Claude Code, Cursor, Copilot, Codex, or a
@@ -162,6 +208,13 @@ Every PR runs locally and in CI:
   Don't suggest Swashbuckle unless an interactive Swagger UI is explicitly
   needed — and even then, prefer `Scalar.AspNetCore` or `NSwag` over
   Swashbuckle.
+- The .NET 10 `webapi` and `worker` templates ship with sample code
+  (`WeatherForecast` record + `MapGet("/weatherforecast", …)` for
+  `webapi`; a `Worker : BackgroundService` looping `LogInformation`
+  every second for `worker`). Strip them in the **same PR** that runs
+  `dotnet new` — don't leave them in "for now". The TreatWarningsAsErrors
+  flag in `Directory.Build.props` will not catch the cruft (it compiles
+  cleanly); only a reviewer's eyes catch it.  
 
 ## How to update this file
 
