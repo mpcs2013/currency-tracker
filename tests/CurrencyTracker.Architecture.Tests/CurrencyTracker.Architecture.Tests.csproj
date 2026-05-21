@@ -1,0 +1,32 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+        <IsPackable>false</IsPackable>
+        <IsTestProject>true</IsTestProject>
+        <UseMicrosoftTestingPlatformRunner>true</UseMicrosoftTestingPlatformRunner>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="coverlet.collector" />
+        <PackageReference Include="FluentAssertions" />
+        <PackageReference Include="Microsoft.NET.Test.Sdk" />
+        <PackageReference Include="NetArchTest.Rules" />
+        <PackageReference Include="xunit.v3" />
+        <PackageReference Include="xunit.runner.visualstudio">
+            <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+            <PrivateAssets>all</PrivateAssets>
+        </PackageReference>
+    </ItemGroup>
+
+    <ItemGroup>
+        <Using Include="Xunit" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\..\src\CurrencyTracker.Domain\CurrencyTracker.Domain.csproj" />
+        <ProjectReference Include="..\..\src\CurrencyTracker.Application\CurrencyTracker.Application.csproj" />
+        <ProjectReference Include="..\..\src\CurrencyTracker.Infrastructure\CurrencyTracker.Infrastructure.csproj" />
+        <ProjectReference Include="..\..\src\CurrencyTracker.Api\CurrencyTracker.Api.csproj" />
+        <ProjectReference Include="..\..\src\CurrencyTracker.Worker\CurrencyTracker.Worker.csproj" />
+    </ItemGroup>
+</Project>
