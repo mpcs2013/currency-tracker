@@ -40,13 +40,14 @@ jobs:
 
       - name: Detect C# sources
         id: detect
+        shell: bash
         run: |
-          if find . -name '*.cs' -not -path './.git/*' | grep -q .; then
-            echo "has_csharp=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "has_csharp=false" >> "$GITHUB_OUTPUT"
-            echo "::notice::No C# sources yet — skipping restore/build/test."
-          fi
+            if compgen -G "**/*.csproj" > /dev/null; then
+                echo "has_csharp=true" >> "$GITHUB_OUTPUT"
+            else
+                echo "has_csharp=false" >> "$GITHUB_OUTPUT"
+                echo "::notice::No .csproj files yet — skipping build and test."
+            fi
 
       - name: Install CSharpier
         if: steps.detect.outputs.has_csharp == 'true'
@@ -66,8 +67,8 @@ jobs:
 
       - name: Build
         if: steps.detect.outputs.has_csharp == 'true'
-        run: dotnet build --configuration Release --no-restore
+        run: dotnet build -c --no-restore
 
       - name: Test
         if: steps.detect.outputs.has_csharp == 'true'
-        run: dotnet test --configuration Release --no-build --logger "trx;LogFileName=test-results.trx"
+        run: dotnet test -c Release --no-build
