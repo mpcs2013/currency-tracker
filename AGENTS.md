@@ -240,7 +240,7 @@ That is the entire ceremony. The full per-issue workflow lives in
 
 Every PR runs locally and in CI:
 
-- `csharpier format .` (and `csharpier --check .` in CI).
+- `dotnet tool run csharpier format .` (and `dotnet tool run csharpier check .` in CI).
 - `dotnet format --verify-no-changes` (style + analyzer rules).
 - `dotnet build --configuration Release` (treats warnings as errors).
 - `dotnet test --configuration Release --no-build`.
