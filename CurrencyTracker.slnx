@@ -1,5 +1,6 @@
 <Solution>
   <Folder Name="/src/">
+    <Project Path="src/CurrencyTracker.Application/CurrencyTracker.Application.csproj" />
     <Project Path="src/CurrencyTracker.Domain/CurrencyTracker.Domain.csproj" />
   </Folder>
 </Solution>
