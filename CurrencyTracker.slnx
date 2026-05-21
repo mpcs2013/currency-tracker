@@ -6,4 +6,7 @@
     <Project Path="src/CurrencyTracker.Infrastructure/CurrencyTracker.Infrastructure.csproj" />
     <Project Path="src/CurrencyTracker.Worker/CurrencyTracker.Worker.csproj" />
   </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/CurrencyTracker.Domain.UnitTests/CurrencyTracker.Domain.UnitTests.csproj" />
+  </Folder>
 </Solution>
