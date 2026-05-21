@@ -1,5 +1,9 @@
 using System.Reflection;
+using CurrencyTracker.Api;
+using CurrencyTracker.Application;
 using CurrencyTracker.Domain;
+using CurrencyTracker.Infrastructure;
+using CurrencyTracker.Worker;
 
 namespace CurrencyTracker.Architecture.Tests;
 
@@ -51,7 +55,7 @@ public sealed class LayerBoundaryTests
     public void Application_references_only_Domain()
     {
         var result = Types
-            .InAssembly(typeof(CurrencyTracker.Application.ApplicationAssemblyAnchor).Assembly)
+            .InAssembly(typeof(ApplicationAssemblyAnchor).Assembly)
             .Should()
             .NotHaveDependencyOnAny(
                 "CurrencyTracker.Infrastructure",
@@ -80,9 +84,7 @@ public sealed class LayerBoundaryTests
     public void Infrastructure_references_only_Application_and_Domain()
     {
         var result = Types
-            .InAssembly(
-                typeof(CurrencyTracker.Infrastructure.InfrastructureAssemblyAnchor).Assembly
-            )
+            .InAssembly(typeof(InfrastructureAssemblyAnchor).Assembly)
             .Should()
             .NotHaveDependencyOnAny("CurrencyTracker.Api", "CurrencyTracker.Worker")
             .GetResult();
@@ -106,7 +108,7 @@ public sealed class LayerBoundaryTests
     public void Api_does_not_reference_Worker()
     {
         var result = Types
-            .InAssembly(typeof(CurrencyTracker.Api.ApiAssemblyAnchor).Assembly)
+            .InAssembly(typeof(ApiAssemblyAnchor).Assembly)
             .Should()
             .NotHaveDependencyOnAny("CurrencyTracker.Worker")
             .GetResult();
@@ -130,7 +132,7 @@ public sealed class LayerBoundaryTests
     public void Worker_does_not_reference_Api()
     {
         var result = Types
-            .InAssembly(typeof(CurrencyTracker.Worker.WorkerAssemblyAnchor).Assembly)
+            .InAssembly(typeof(WorkerAssemblyAnchor).Assembly)
             .Should()
             .NotHaveDependencyOnAny("CurrencyTracker.Api")
             .GetResult();
@@ -155,11 +157,11 @@ public sealed class LayerBoundaryTests
     {
         IEnumerable<Assembly> srcAssemblies =
         [
-            typeof(CurrencyTracker.Domain.DomainAssemblyAnchor).Assembly,
-            typeof(CurrencyTracker.Application.ApplicationAssemblyAnchor).Assembly,
-            typeof(CurrencyTracker.Infrastructure.InfrastructureAssemblyAnchor).Assembly,
-            typeof(CurrencyTracker.Api.ApiAssemblyAnchor).Assembly,
-            typeof(CurrencyTracker.Worker.WorkerAssemblyAnchor).Assembly,
+            typeof(DomainAssemblyAnchor).Assembly,
+            typeof(ApplicationAssemblyAnchor).Assembly,
+            typeof(InfrastructureAssemblyAnchor).Assembly,
+            typeof(ApiAssemblyAnchor).Assembly,
+            typeof(WorkerAssemblyAnchor).Assembly,
         ];
 
         var result = Types
