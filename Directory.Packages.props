@@ -9,6 +9,7 @@
         >
     </PropertyGroup>
     <ItemGroup>
-        <!-- Intentionally empty in Phase 0: add PackageVersion entries when first referenced by a project. -->
+        <!-- Api -->
+        <PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="10.0.8" />
     </ItemGroup>
 </Project>
