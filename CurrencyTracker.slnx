@@ -4,5 +4,6 @@
     <Project Path="src/CurrencyTracker.Application/CurrencyTracker.Application.csproj" />
     <Project Path="src/CurrencyTracker.Domain/CurrencyTracker.Domain.csproj" />
     <Project Path="src/CurrencyTracker.Infrastructure/CurrencyTracker.Infrastructure.csproj" />
+    <Project Path="src/CurrencyTracker.Worker/CurrencyTracker.Worker.csproj" />
   </Folder>
 </Solution>
