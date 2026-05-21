@@ -1,1 +1,5 @@
-<Solution></Solution>
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/CurrencyTracker.Domain/CurrencyTracker.Domain.csproj" />
+  </Folder>
+</Solution>
