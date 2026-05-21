@@ -2,5 +2,6 @@
   <Folder Name="/src/">
     <Project Path="src/CurrencyTracker.Application/CurrencyTracker.Application.csproj" />
     <Project Path="src/CurrencyTracker.Domain/CurrencyTracker.Domain.csproj" />
+    <Project Path="src/CurrencyTracker.Infrastructure/CurrencyTracker.Infrastructure.csproj" />
   </Folder>
 </Solution>
