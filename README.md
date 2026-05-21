@@ -71,6 +71,7 @@ flowchart LR
     classDef tests fill:#f1f5f9,stroke:#475569,color:#0f172a,stroke-dasharray: 5 3
     class Domain,Application,Infrastructure,Api,Worker src
     class DomainTests,AppTests,ArchTests tests
+```
 
 ## Project documents
 
