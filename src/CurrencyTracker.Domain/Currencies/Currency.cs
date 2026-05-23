@@ -76,7 +76,7 @@ public sealed record Currency
     /// <summary>Compares identity equality using <see cref="Code"/> only.</summary>
     /// <param name="other">Other currency to compare.</param>
     /// <returns><see langword="true"/> when codes match.</returns>
-    public bool Equals(Currency? other) => other is not null && Code == other.Code;
+    public bool Equals(object? other) => other is not null && other is Currency && Code == other.Code;
 
     /// <summary>Returns a hash code derived from <see cref="Code"/> only.</summary>
     /// <returns>Identity hash code.</returns>
