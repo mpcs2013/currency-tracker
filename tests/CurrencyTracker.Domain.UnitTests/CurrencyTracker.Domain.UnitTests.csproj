@@ -20,4 +20,8 @@
     <ItemGroup>
         <ProjectReference Include="..\..\src\CurrencyTracker.Domain\CurrencyTracker.Domain.csproj" />
     </ItemGroup>
+
+    <ItemGroup>
+        <Folder Include="Money\" />
+    </ItemGroup>
 </Project>
