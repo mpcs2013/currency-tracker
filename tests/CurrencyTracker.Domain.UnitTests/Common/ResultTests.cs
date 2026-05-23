@@ -1,5 +1,5 @@
 using CurrencyTracker.Domain.Common;
-using static System.Runtime.InteropServices.JavaScript.JSType;
+using CurrencyTracker.Domain.Exceptions;
 
 namespace CurrencyTracker.Domain.UnitTests.Common;
 
@@ -22,7 +22,7 @@ public sealed class ResultTests
     [Fact]
     public void Failure_IsFailure_is_true()
     {
-        var sut = Result<int>.Failure(new Error("X", "boom"));
+        var sut = Result<int>.Failure(new DomainError("X", "boom"));
 
         sut.IsSuccess.Should().BeFalse();
         sut.IsFailure.Should().BeTrue();
@@ -44,7 +44,7 @@ public sealed class ResultTests
     [Fact]
     public void Match_calls_onFailure_for_failure_value()
     {
-        var sut = Result<int>.Failure(new Error("X", "boom"));
+        var sut = Result<int>.Failure(new DomainError("X", "boom"));
 
         var actual = sut.Match(
             onSuccess: value => $"ok:{value}",
@@ -68,19 +68,19 @@ public sealed class ResultTests
     [Fact]
     public void Map_preserves_failure()
     {
-        var error = new Error("X", "boom");
+        var error = new DomainError("X", "boom");
         var sut = Result<int>.Failure(error);
 
         var actual = sut.Map(value => value.ToString());
 
         actual.IsFailure.Should().BeTrue();
-        actual.Match(_ => new Error("Y", ""), e => e).Should().Be(error);
+        actual.Match(_ => new DomainError("Y", ""), e => e).Should().Be(error);
     }
 
     [Fact]
     public void Value_on_failure_throws_DomainException()
     {
-        var sut = Result<int>.Failure(new Error("X", "boom"));
+        var sut = Result<int>.Failure(new DomainError("X", "boom"));
 
         var act = () => _ = sut.Value;
 

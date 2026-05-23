@@ -28,3 +28,10 @@ dotnet_diagnostic.IDE0058.severity = none     # Expression-value-not-used — to
 # Sort `using` directives
 dotnet_sort_system_directives_first = true
 dotnet_separate_import_directive_groups = false
+
+# CA1000: Static factories on Result<T> are the entire API surface.
+# The private ctor pattern requires them to be on the generic type itself;
+# a non-generic Result helper class would force the ctor to be internal,
+# breaking the invariant that Success/Failure are the only construction paths.
+[src/CurrencyTracker.Domain/Common/Result.cs]
+dotnet_diagnostic.CA1000.severity = none
