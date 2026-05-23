@@ -27,7 +27,7 @@ public sealed class CurrencyCodeTests
         var result = CurrencyCode.Create(null!);
 
         result.IsFailure.Should().BeTrue();
-        result.DomainError.Code.Should().Be("CURRENCY_CODE_REQUIRED");
+        result.Error.Code.Should().Be("CURRENCY_CODE_REQUIRED");
     }
 
     [Fact]
@@ -35,7 +35,7 @@ public sealed class CurrencyCodeTests
     {
         var result = CurrencyCode.Create("");
 
-        result.DomainError.Code.Should().Be("CURRENCY_CODE_REQUIRED");
+        result.Error.Code.Should().Be("CURRENCY_CODE_REQUIRED");
     }
 
     [Theory]
@@ -45,7 +45,7 @@ public sealed class CurrencyCodeTests
     {
         var result = CurrencyCode.Create(raw);
 
-        result.DomainError.Code.Should().Be("CURRENCY_CODE_LENGTH");
+        result.Error.Code.Should().Be("CURRENCY_CODE_LENGTH");
     }
 
     [Theory]
@@ -57,7 +57,7 @@ public sealed class CurrencyCodeTests
     {
         var result = CurrencyCode.Create(raw);
 
-        result.DomainError.Code.Should().Be("CURRENCY_CODE_FORMAT");
+        result.Error.Code.Should().Be("CURRENCY_CODE_FORMAT");
     }
 
     [Fact]
@@ -65,7 +65,7 @@ public sealed class CurrencyCodeTests
     {
         var result = CurrencyCode.Create("XYZ");
 
-        result.DomainError.Code.Should().Be("CURRENCY_CODE_UNKNOWN");
+        result.Error.Code.Should().Be("CURRENCY_CODE_UNKNOWN");
     }
 
     [Fact]
