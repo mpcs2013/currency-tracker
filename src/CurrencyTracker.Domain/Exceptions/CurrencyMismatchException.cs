@@ -1,3 +1,5 @@
+using CurrencyTracker.Domain.Currencies;
+
 namespace CurrencyTracker.Domain.Exceptions;
 
 /// <summary>
@@ -13,6 +15,6 @@ public sealed class CurrencyMismatchException : DomainException
     /// </summary>
     /// <param name="left">Currency code of the left-hand operand.</param>
     /// <param name="right">Currency code of the right-hand operand.</param>
-    public CurrencyMismatchException(string left, string right)
+    public CurrencyMismatchException(CurrencyCode left, CurrencyCode right)
         : base($"Cannot combine Money values in different currencies: {left} and {right}.") { }
 }
