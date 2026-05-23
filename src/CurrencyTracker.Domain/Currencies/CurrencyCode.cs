@@ -11,9 +11,7 @@ namespace CurrencyTracker.Domain.Currencies;
 /// </summary>
 public readonly record struct CurrencyCode
 {
-    private static readonly IReadOnlySet<string> KnownCodes = new HashSet<string>(
-        StringComparer.Ordinal
-    )
+    private static readonly HashSet<string> KnownCodes = new(StringComparer.Ordinal)
     {
         "USD",
         "EUR",
