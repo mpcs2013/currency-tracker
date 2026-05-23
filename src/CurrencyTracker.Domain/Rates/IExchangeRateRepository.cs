@@ -9,30 +9,32 @@ namespace CurrencyTracker.Domain.Rates;
 public interface IExchangeRateRepository
 {
     /// <summary>
-    /// Gets an exchange rate by base/quote pair and observation date.
+    /// Gets the exchange rate between two currencies for a specific date.
     /// </summary>
-    /// <param name="base">Base currency code.</param>
-    /// <param name="quote">Quote currency code.</param>
-    /// <param name="asOf">Observation date.</param>
-    /// <param name="cancellationToken">Cancellation token.</param>
-    /// <returns>The matching exchange rate or <see langword="null"/> when absent.</returns>
-#pragma warning disable CA1716 // Required domain ubiquitous language: base currency.
+    /// <param name="baseCurrency">The base currency code.</param>
+    /// <param name="quote">The quote currency code.</param>
+    /// <param name="asOf">The date for which to retrieve the exchange rate.</param>
+    /// <param name="cancellationToken">A token to monitor for cancellation requests.</param>
+    /// <returns>The exchange rate for the specified currencies and date, or <see langword="null"/> if not found.</returns>
     Task<ExchangeRate?> GetAsync(
-        CurrencyCode @base,
+        CurrencyCode baseCurrency,
         CurrencyCode quote,
         DateOnly asOf,
-        CancellationToken cancellationToken
-    );
-#pragma warning restore CA1716
+        CancellationToken cancellationToken);
 
-    // Phase 3.5: uncomment snapshot-oriented methods when RateSnapshot lands.
-    // Task<IReadOnlyList<ExchangeRate>> ListForSnapshotAsync(
-    //     CurrencyCode @base,
-    //     DateOnly asOf,
-    //     CancellationToken cancellationToken
-    // );
-    // Task UpsertSnapshotAsync(
-    //     IReadOnlyCollection<ExchangeRate> rates,
-    //     CancellationToken cancellationToken
-    // );
+    /// <summary>
+    /// Gets the exchange rate snapshot for a specific base currency and date.
+    /// </summary>
+    /// <param name="baseCurrency">The base currency code.</param>
+    /// <param name="asOf">The date for which to retrieve the snapshot.</param>
+    /// <param name="cancellationToken">A token to monitor for cancellation requests.</param>
+    /// <returns>The exchange rate snapshot for the specified base currency and date, or <see langword="null"/> if not found.</returns>
+    Task<RateSnapshot?> GetSnapshotAsync(CurrencyCode baseCurrency, DateOnly asOf, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Saves the provided exchange rate snapshot.
+    /// </summary>
+    /// <param name="snapshot">The exchange rate snapshot to save.</param>
+    /// <param name="cancellationToken">A token to monitor for cancellation requests.</param>
+    Task SaveSnapshotAsync(RateSnapshot snapshot, CancellationToken cancellationToken);
 }

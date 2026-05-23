@@ -22,9 +22,9 @@ public sealed record ExchangeRate
     /// <summary>Gets the observation date for this rate.</summary>
     public DateOnly AsOf { get; }
 
-    private ExchangeRate(CurrencyCode @base, CurrencyCode quote, decimal rate, DateOnly asOf)
+    private ExchangeRate(CurrencyCode baseCurrency, CurrencyCode quote, decimal rate, DateOnly asOf)
     {
-        Base = @base;
+        Base = baseCurrency;
         Quote = quote;
         Rate = rate;
         AsOf = asOf;
@@ -34,19 +34,19 @@ public sealed record ExchangeRate
     /// Creates an <see cref="ExchangeRate"/> after validating pair, rate,
     /// and observation date.
     /// </summary>
-    /// <param name="base">Base currency of the pair.</param>
+    /// <param name="baseCurrency">Base currency of the pair.</param>
     /// <param name="quote">Quote currency of the pair.</param>
     /// <param name="rate">Observed rate value; must be greater than zero.</param>
     /// <param name="asOf">Observation date; must not be <see langword="default"/>.</param>
     /// <returns>A success carrying the entity, or a validation failure.</returns>
     public static Result<ExchangeRate> Create(
-        CurrencyCode @base,
+        CurrencyCode baseCurrency,
         CurrencyCode quote,
         decimal rate,
         DateOnly asOf
     )
     {
-        if (@base == quote)
+        if (baseCurrency == quote)
         {
             return Result<ExchangeRate>.Failure(
                 DomainError.Validation(
@@ -76,7 +76,7 @@ public sealed record ExchangeRate
             );
         }
 
-        return Result<ExchangeRate>.Success(new ExchangeRate(@base, quote, rate, asOf));
+        return Result<ExchangeRate>.Success(new ExchangeRate(baseCurrency, quote, rate, asOf));
     }
 
     /// <summary>
