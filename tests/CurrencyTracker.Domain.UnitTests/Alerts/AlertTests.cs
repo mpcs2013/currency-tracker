@@ -30,7 +30,7 @@ public sealed class AlertTests
         var result = Alert.Create(Guid.Empty, 1.00m, 1.05m, TestFiredAt);
 
         result.IsFailure.Should().BeTrue();
-        result.Error.Code.Should().Be("ALERT_RULE_REQUIRED");
+        result.Error.Code.Should().Be("ALERT_RULE_ID_REQUIRED");
     }
 
     [Fact]

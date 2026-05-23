@@ -66,7 +66,7 @@ public sealed record Alert
         if (ruleId == Guid.Empty)
         {
             return Result<Alert>.Failure(
-                DomainError.Validation("ALERT_RULE_REQUIRED", "RuleId is required.")
+                DomainError.Validation("ALERT_RULE_ID_REQUIRED", "RuleId is required.")
             );
         }
 
