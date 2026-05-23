@@ -85,8 +85,8 @@ public sealed record ExchangeRate
     /// </summary>
     /// <param name="other">Other entity to compare.</param>
     /// <returns><see langword="true"/> when composite identities match.</returns>
-    public bool Equals(ExchangeRate? other)
-        => other is not null && Base == other.Base && Quote == other.Quote && AsOf == other.AsOf;
+    public bool Equals(ExchangeRate? other) =>
+        other is not null && Base == other.Base && Quote == other.Quote && AsOf == other.AsOf;
 
     /// <summary>
     /// Returns a hash code derived from the composite identity only.

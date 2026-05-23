@@ -16,14 +16,14 @@ public interface IExchangeRateRepository
     /// <param name="asOf">Observation date.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>The matching exchange rate or <see langword="null"/> when absent.</returns>
-    #pragma warning disable CA1716 // Required domain ubiquitous language: base currency.
+#pragma warning disable CA1716 // Required domain ubiquitous language: base currency.
     Task<ExchangeRate?> GetAsync(
         CurrencyCode @base,
         CurrencyCode quote,
         DateOnly asOf,
         CancellationToken cancellationToken
     );
-    #pragma warning restore CA1716
+#pragma warning restore CA1716
 
     // Phase 3.5: uncomment snapshot-oriented methods when RateSnapshot lands.
     // Task<IReadOnlyList<ExchangeRate>> ListForSnapshotAsync(
