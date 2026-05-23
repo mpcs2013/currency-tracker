@@ -1,4 +1,8 @@
 <Solution>
+  <Folder Name="/Solution Items/">
+    <File Path=".editorconfig" />
+    <File Path="Directory.Packages.props" />
+  </Folder>
   <Folder Name="/src/">
     <Project Path="src/CurrencyTracker.Api/CurrencyTracker.Api.csproj" />
     <Project Path="src/CurrencyTracker.Application/CurrencyTracker.Application.csproj" />

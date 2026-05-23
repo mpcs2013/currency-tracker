@@ -12,7 +12,7 @@ namespace CurrencyTracker.Domain.Common;
 /// API responses, never localised.</param>
 /// <param name="Message">Human-readable description of the failure.
 /// Suitable for end-user display after localisation; not a stable contract.</param>
-public sealed record Error(string Code, string Message)
+public sealed record DomainError(string Code, string Message)
 {
     /// <summary>
     /// Convenience factory for validation-shaped errors. Sets no fields
@@ -22,6 +22,6 @@ public sealed record Error(string Code, string Message)
     /// </summary>
     /// <param name="code">Stable error code.</param>
     /// <param name="message">Human-readable description.</param>
-    /// <returns>A new <see cref="Error"/> with the supplied fields.</returns>
-    public static Error Validation(string code, string message) => new(code, message);
+    /// <returns>A new <see cref="DomainError"/> with the supplied fields.</returns>
+    public static DomainError Validation(string code, string message) => new(code, message);
 }

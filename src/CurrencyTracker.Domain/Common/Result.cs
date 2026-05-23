@@ -5,7 +5,7 @@ namespace CurrencyTracker.Domain.Common;
 /// <summary>
 /// Discriminated-union-shaped result of a domain operation: either a
 /// success carrying a value of <typeparamref name="T"/>, or a failure
-/// carrying an <see cref="Common.Error"/>. Used by domain factory
+/// carrying an <see cref="Common.DomainError"/>. Used by domain factory
 /// methods (<c>Create</c>) to communicate expected failures without
 /// throwing.
 /// </summary>
@@ -13,9 +13,9 @@ namespace CurrencyTracker.Domain.Common;
 public readonly record struct Result<T>
 {
     private readonly T _value;
-    private readonly Error? _error;
+    private readonly DomainError? _error;
 
-    private Result(T value, Error? error, bool isSuccess)
+    private Result(T value, DomainError? error, bool isSuccess)
     {
         _value = value;
         _error = error;
@@ -42,7 +42,7 @@ public readonly record struct Result<T>
     /// result is a success.
     /// </summary>
     /// <exception cref="DomainException">If <see cref="IsSuccess"/>.</exception>
-    public Error Error =>
+    public DomainError Error =>
         IsFailure ? _error! : throw new DomainException("Cannot access Error on a Success result.");
 
     /// <summary>Creates a success result carrying the supplied value.</summary>
@@ -53,7 +53,7 @@ public readonly record struct Result<T>
     /// <summary>Creates a failure result carrying the supplied error.</summary>
     /// <param name="error">The failure error; must not be <see langword="null"/>.</param>
     /// <returns>A failure-state <see cref="Result{T}"/>.</returns>
-    public static Result<T> Failure(Error error) => new(default!, error, isSuccess: false);
+    public static Result<T> Failure(DomainError error) => new(default!, error, isSuccess: false);
 
     /// <summary>
     /// Projects the result to a value of <typeparamref name="TOut"/> by
@@ -65,7 +65,7 @@ public readonly record struct Result<T>
     /// <param name="onSuccess">Projection applied when the result is a success.</param>
     /// <param name="onFailure">Projection applied when the result is a failure.</param>
     /// <returns>The chosen projection's return value.</returns>
-    public TOut Match<TOut>(Func<T, TOut> onSuccess, Func<Error, TOut> onFailure) =>
+    public TOut Match<TOut>(Func<T, TOut> onSuccess, Func<DomainError, TOut> onFailure) =>
         IsSuccess ? onSuccess(_value) : onFailure(_error!);
 
     /// <summary>
