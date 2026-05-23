@@ -20,7 +20,8 @@ public interface IExchangeRateRepository
         CurrencyCode baseCurrency,
         CurrencyCode quote,
         DateOnly asOf,
-        CancellationToken cancellationToken);
+        CancellationToken cancellationToken
+    );
 
     /// <summary>
     /// Gets the exchange rate snapshot for a specific base currency and date.
@@ -29,7 +30,11 @@ public interface IExchangeRateRepository
     /// <param name="asOf">The date for which to retrieve the snapshot.</param>
     /// <param name="cancellationToken">A token to monitor for cancellation requests.</param>
     /// <returns>The exchange rate snapshot for the specified base currency and date, or <see langword="null"/> if not found.</returns>
-    Task<RateSnapshot?> GetSnapshotAsync(CurrencyCode baseCurrency, DateOnly asOf, CancellationToken cancellationToken);
+    Task<RateSnapshot?> GetSnapshotAsync(
+        CurrencyCode baseCurrency,
+        DateOnly asOf,
+        CancellationToken cancellationToken
+    );
 
     /// <summary>
     /// Saves the provided exchange rate snapshot.

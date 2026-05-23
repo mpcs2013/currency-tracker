@@ -20,7 +20,11 @@ public sealed record RateSnapshot
     /// <summary>Gets the rates in the snapshot.</summary>
     public IReadOnlyList<ExchangeRate> Rates { get; }
 
-    private RateSnapshot(CurrencyCode baseCurrency, DateOnly asOf, IReadOnlyList<ExchangeRate> rates)
+    private RateSnapshot(
+        CurrencyCode baseCurrency,
+        DateOnly asOf,
+        IReadOnlyList<ExchangeRate> rates
+    )
     {
         Base = baseCurrency;
         AsOf = asOf;
@@ -31,14 +35,19 @@ public sealed record RateSnapshot
     public static Result<RateSnapshot> Create(
         CurrencyCode baseCurrency,
         DateOnly asOf,
-        IEnumerable<ExchangeRate> rates)
+        IEnumerable<ExchangeRate> rates
+    )
     {
         var materialised = rates.ToList();
 
         if (materialised.Count == 0)
         {
             return Result<RateSnapshot>.Failure(
-                DomainError.Validation("SNAPSHOT_EMPTY", "A snapshot must contain at least one rate."));
+                DomainError.Validation(
+                    "SNAPSHOT_EMPTY",
+                    "A snapshot must contain at least one rate."
+                )
+            );
         }
 
         foreach (var rate in materialised)
@@ -46,13 +55,21 @@ public sealed record RateSnapshot
             if (rate.Base != baseCurrency)
             {
                 return Result<RateSnapshot>.Failure(
-                    DomainError.Validation("SNAPSHOT_BASE_MISMATCH", $"Rate for {rate.Quote.Value} has base {rate.Base.Value}, expected {baseCurrency.Value}."));
+                    DomainError.Validation(
+                        "SNAPSHOT_BASE_MISMATCH",
+                        $"Rate for {rate.Quote.Value} has base {rate.Base.Value}, expected {baseCurrency.Value}."
+                    )
+                );
             }
 
             if (rate.AsOf != asOf)
             {
                 return Result<RateSnapshot>.Failure(
-                    DomainError.Validation("SNAPSHOT_ASOF_MISMATCH", $"Rate for {rate.Quote.Value} is dated {rate.AsOf:yyyy-MM-dd}, expected {asOf:yyyy-MM-dd}."));
+                    DomainError.Validation(
+                        "SNAPSHOT_ASOF_MISMATCH",
+                        $"Rate for {rate.Quote.Value} is dated {rate.AsOf:yyyy-MM-dd}, expected {asOf:yyyy-MM-dd}."
+                    )
+                );
             }
         }
 
@@ -62,11 +79,17 @@ public sealed record RateSnapshot
             if (!distinctQuotes.Add(rate.Quote))
             {
                 return Result<RateSnapshot>.Failure(
-                    DomainError.Validation("SNAPSHOT_DUPLICATE_QUOTE", $"Duplicate rate for quote {rate.Quote.Value}."));
+                    DomainError.Validation(
+                        "SNAPSHOT_DUPLICATE_QUOTE",
+                        $"Duplicate rate for quote {rate.Quote.Value}."
+                    )
+                );
             }
         }
 
-        return Result<RateSnapshot>.Success(new RateSnapshot(baseCurrency, asOf, materialised.AsReadOnly()));
+        return Result<RateSnapshot>.Success(
+            new RateSnapshot(baseCurrency, asOf, materialised.AsReadOnly())
+        );
     }
 
     /// <summary>
