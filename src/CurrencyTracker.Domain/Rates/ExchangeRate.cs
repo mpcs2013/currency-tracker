@@ -50,7 +50,7 @@ public sealed record ExchangeRate
         {
             return Result<ExchangeRate>.Failure(
                 DomainError.Validation(
-                    "EXCHANGE_RATE_BASE_QUOTE_MUST_DIFFER",
+                    "RATE_SAME_CURRENCY", 
                     "Base and quote currencies must differ."
                 )
             );
@@ -60,8 +60,8 @@ public sealed record ExchangeRate
         {
             return Result<ExchangeRate>.Failure(
                 DomainError.Validation(
-                    "EXCHANGE_RATE_RATE_POSITIVE",
-                    "An exchange rate must be greater than zero."
+                    "RATE_NONPOSITIVE", 
+                    "Rate must be strictly positive."
                 )
             );
         }
@@ -70,8 +70,8 @@ public sealed record ExchangeRate
         {
             return Result<ExchangeRate>.Failure(
                 DomainError.Validation(
-                    "EXCHANGE_RATE_AS_OF_REQUIRED",
-                    "An observation date is required."
+                    "RATE_ASOF_REQUIRED", 
+                    "AsOf date is required."
                 )
             );
         }
