@@ -1,7 +1,7 @@
 using CurrencyTracker.Application.UnitTests.Fakes;
 using CurrencyTracker.Infrastructure.Time;
 
-namespace CurrencyTracker.Application.UnitTests.Abstractions;
+namespace CurrencyTracker.Application.UnitTests.Abstractions.Time;
 
 /// <summary>
 /// Tests for <see cref="CurrencyTracker.Application.Abstractions.Time.IDateTimeProvider"/>.
