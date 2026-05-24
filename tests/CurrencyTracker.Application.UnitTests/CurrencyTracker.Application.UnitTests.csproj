@@ -21,5 +21,6 @@
     <ItemGroup>
         <ProjectReference Include="..\..\src\CurrencyTracker.Application\CurrencyTracker.Application.csproj" />
         <ProjectReference Include="..\..\src\CurrencyTracker.Domain\CurrencyTracker.Domain.csproj" />
+        <ProjectReference Include="..\..\src\CurrencyTracker.Infrastructure\CurrencyTracker.Infrastructure.csproj" />
     </ItemGroup>
 </Project>
