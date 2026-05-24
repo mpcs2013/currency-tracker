@@ -6,33 +6,34 @@ using CurrencyTracker.Domain.Rates;
 namespace CurrencyTracker.Application.UnitTests.Fakes;
 
 /// <summary>
-/// In-memory <see cref="IExchangeRateProvider"/> fake for unit tests.
-/// Snapshots are keyed by base currency and date and can be overridden
-/// by <see cref="FailWith"/> to simulate provider failures.
+/// In-memory <see cref="IExchangeRateProvider"/> fake. Tests seed
+/// expected (base, date) → snapshot mappings via <see cref="Seed"/>;
+/// unseeded lookups return a <c>PROVIDER_UNAVAILABLE</c> failure.
+/// Setting <see cref="FailWith"/> forces every call to return that
+/// failure regardless of seed.
 /// </summary>
 public sealed class InMemoryExchangeRateProvider : IExchangeRateProvider
 {
-    private readonly Dictionary<
-        (CurrencyCode BaseCurrency, DateOnly AsOf),
-        RateSnapshot
-    > _snapshots = [];
+    private readonly Dictionary<(CurrencyCode, DateOnly), RateSnapshot> _store = new();
 
     /// <summary>
-    /// Gets or sets a failure factory that, when configured, overrides
-    /// seeded snapshots and is returned from <see cref="FetchAsync"/>.
+    /// When non-<see langword="null"/>, every <see cref="FetchAsync"/>
+    /// call returns a <see cref="Result{T}.Failure"/> carrying this
+    /// error, ignoring any seeded snapshot. Use to exercise failure
+    /// paths in handler tests.
     /// </summary>
-    public Func<Result<RateSnapshot>>? FailWith { get; set; }
+    public DomainError? FailWith { get; set; }
 
     /// <summary>
-    /// Seeds a snapshot for the given base currency and date.
+    /// Seeds the fake so that <see cref="FetchAsync"/> with the same
+    /// <paramref name="baseCurrency"/> and <paramref name="asOf"/>
+    /// returns <paramref name="snapshot"/>.
     /// </summary>
     /// <param name="baseCurrency">Base currency key.</param>
-    /// <param name="asOf">Observation date key.</param>
-    /// <param name="snapshot">Snapshot to return for the key.</param>
-    public void Seed(CurrencyCode baseCurrency, DateOnly asOf, RateSnapshot snapshot)
-    {
-        _snapshots[(baseCurrency, asOf)] = snapshot;
-    }
+    /// <param name="asOf">Calendar date key.</param>
+    /// <param name="snapshot">Snapshot to return.</param>
+    public void Seed(CurrencyCode baseCurrency, DateOnly asOf, RateSnapshot snapshot) =>
+        _store[(baseCurrency, asOf)] = snapshot;
 
     /// <inheritdoc />
     public Task<Result<RateSnapshot>> FetchAsync(
@@ -45,10 +46,10 @@ public sealed class InMemoryExchangeRateProvider : IExchangeRateProvider
 
         if (FailWith is not null)
         {
-            return Task.FromResult(FailWith());
+            return Task.FromResult(Result<RateSnapshot>.Failure(FailWith));
         }
 
-        if (_snapshots.TryGetValue((baseCurrency, asOf), out var snapshot))
+        if (_store.TryGetValue((baseCurrency, asOf), out var snapshot))
         {
             return Task.FromResult(Result<RateSnapshot>.Success(snapshot));
         }
@@ -57,7 +58,7 @@ public sealed class InMemoryExchangeRateProvider : IExchangeRateProvider
             Result<RateSnapshot>.Failure(
                 new DomainError(
                     "PROVIDER_UNAVAILABLE",
-                    "The exchange-rate provider is unavailable for the requested snapshot."
+                    $"No seeded snapshot for {baseCurrency.Value} on {asOf:yyyy-MM-dd}."
                 )
             )
         );
