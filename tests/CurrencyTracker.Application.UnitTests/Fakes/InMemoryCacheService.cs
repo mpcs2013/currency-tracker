@@ -13,7 +13,8 @@ namespace CurrencyTracker.Application.UnitTests.Fakes;
 /// </summary>
 public sealed class InMemoryCacheService : ICacheService
 {
-    private readonly ConcurrentDictionary<string, (string Value, DateTimeOffset Expires)> _store = new();
+    private readonly ConcurrentDictionary<string, (string Value, DateTimeOffset Expires)> _store =
+        new();
 
     /// <inheritdoc />
     public Task<string?> GetAsync(string key, CancellationToken cancellationToken)
@@ -32,7 +33,12 @@ public sealed class InMemoryCacheService : ICacheService
     }
 
     /// <inheritdoc />
-    public Task SetAsync(string key, string value, TimeSpan ttl, CancellationToken cancellationToken)
+    public Task SetAsync(
+        string key,
+        string value,
+        TimeSpan ttl,
+        CancellationToken cancellationToken
+    )
     {
         _store[key] = (value, DateTimeOffset.UtcNow.Add(ttl));
         return Task.CompletedTask;
@@ -50,14 +56,16 @@ public sealed class InMemoryCacheService : ICacheService
         string key,
         Func<CancellationToken, Task<T>> factory,
         TimeSpan ttl,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken
+    )
     {
         var cached = await GetAsync(key, cancellationToken).ConfigureAwait(false);
         if (cached is not null)
         {
             return JsonSerializer.Deserialize<T>(cached)
                 ?? throw new InvalidOperationException(
-                    $"Cached value for key '{key}' deserialised to null.");
+                    $"Cached value for key '{key}' deserialised to null."
+                );
         }
 
         var fresh = await factory(cancellationToken).ConfigureAwait(false);

@@ -71,7 +71,8 @@ public sealed class ICacheServiceTests
                 return Task.FromResult("fresh");
             },
             TimeSpan.FromMinutes(5),
-            NoCt);
+            NoCt
+        );
 
         actual.Should().Be("cached");
         factoryCalls.Should().Be(0);
@@ -86,7 +87,8 @@ public sealed class ICacheServiceTests
             "k",
             ct => Task.FromResult("fresh"),
             TimeSpan.FromMinutes(5),
-            NoCt);
+            NoCt
+        );
         var second = await sut.GetAsync("k", NoCt);
 
         first.Should().Be("fresh");
@@ -100,15 +102,17 @@ public sealed class ICacheServiceTests
         using var cts = new CancellationTokenSource();
         cts.Cancel();
 
-        var act = async () => await sut.GetOrSetAsync(
-            "k",
-            ct =>
-            {
-                ct.ThrowIfCancellationRequested();
-                return Task.FromResult("fresh");
-            },
-            TimeSpan.FromMinutes(5),
-            cts.Token);
+        var act = async () =>
+            await sut.GetOrSetAsync(
+                "k",
+                ct =>
+                {
+                    ct.ThrowIfCancellationRequested();
+                    return Task.FromResult("fresh");
+                },
+                TimeSpan.FromMinutes(5),
+                cts.Token
+            );
 
         await act.Should().ThrowAsync<OperationCanceledException>();
     }

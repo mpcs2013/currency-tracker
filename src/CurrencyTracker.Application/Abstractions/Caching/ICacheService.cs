@@ -67,5 +67,6 @@ public interface ICacheService
         string key,
         Func<CancellationToken, Task<T>> factory,
         TimeSpan ttl,
-        CancellationToken cancellationToken);
+        CancellationToken cancellationToken
+    );
 }
