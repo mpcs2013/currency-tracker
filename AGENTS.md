@@ -76,6 +76,49 @@ expose. If a future PR wants to add a third `Yes` (e.g. a CLI tool, a
 gRPC host, a Functions app), that's an ADR-worthy decision — the
 current pipeline assumes exactly two.
 
+## Ports and adapters
+
+A **port** is an interface defined by the Application layer that describes a
+capability Application needs from the outside world but won't implement itself.
+The classic phrasing: the port is the socket on the wall, the adapter is the
+plug on the device. **Application owns the socket shape; Infrastructure owns
+the plug.**
+
+Ports live in `src/CurrencyTracker.Application/Abstractions/<Capability>/`.
+Adapters live in `src/CurrencyTracker.Infrastructure/<Capability>/`.
+
+### Ports defined in Phase 4
+
+| Port                       | Purpose                                                | Adapter location (when shipped)                          | Phase |
+| -------------------------- | ------------------------------------------------------ | -------------------------------------------------------- | ----- |
+| `IDateTimeProvider`        | Replace `DateTimeOffset.UtcNow` so tests can fix time. | `Infrastructure/Time/SystemDateTimeProvider.cs`          | 4     |
+| `ICacheService`            | Get/set/remove cache entries; cache-aside helper.      | `Infrastructure/Caching/RedisCacheService.cs`            | 10    |
+| `IExchangeRateProvider`    | Fetch an FX-rate snapshot from an external source.     | `Infrastructure/Providers/FrankfurterRateProvider.cs`    | 9     |
+| `IAlertNotifier`           | Dispatch an `Alert` to a configured channel.           | `Infrastructure/Notifications/LogAlertNotifier.cs`       | 12    |
+| `ICurrentUser`             | Identity / claims for the current request.             | `Infrastructure/Security/HttpContextCurrentUser.cs`      | 11    |
+| `IUnitOfWork`              | Atomically persist outstanding domain changes.         | `Infrastructure/Persistence/EfUnitOfWork.cs`             | 8     |
+| `ICurrencyRepository`      | Load and save `Currency` aggregates.                   | `Infrastructure/Persistence/EfCurrencyRepository.cs`     | 8     |
+| `IExchangeRateRepository`  | Load and save `RateSnapshot` aggregates.               | `Infrastructure/Persistence/EfExchangeRateRepository.cs` | 8     |
+
+### The rule that drove the Phase 4 repository move
+
+- **Interfaces live with the layer that *needs* them, not with the layer that
+  *defines the model*.** The repository interfaces transiently sat in Domain
+  during Phase 3 so Phase 4 could move them deliberately. The mover is
+  Application, which is what calls them; Domain doesn't call repositories.
+
+### Fakes live with tests
+
+- Every port has an in-memory **fake** under
+  `tests/CurrencyTracker.Application.UnitTests/Fakes/`, one class per port,
+  `InMemory<PortName>` (e.g. `InMemoryExchangeRateProvider`).
+- Fakes are real working implementations with their own state, **not** mocks.
+  Tests interact with the fake by seeding state (`provider.Seed(usd, today,
+  snapshot)`) and asserting on state afterward.
+- Mocks (NSubstitute) are reserved for cases where the **call shape** is the
+  contract — e.g. "did the exception handler invoke the logger". For
+  state-shaped behaviour, prefer a fake.
+
 ## Testing conventions
 
 `tests/` holds three classes of test project. **Unit tests** under
