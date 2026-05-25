@@ -29,6 +29,8 @@ builder.Services.AddProblemDetails(options =>
 });
 
 builder.Services.AddExceptionHandler<ValidationExceptionHandler>(); // ← added in 6.4
+builder.Services.AddExceptionHandler<NotFoundExceptionHandler>(); // ← added in 6.6
+builder.Services.AddExceptionHandler<DomainExceptionHandler>(); // ← added in 6.6
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>(); // ← added in 6.4
 
 var app = builder.Build();

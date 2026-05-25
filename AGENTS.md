@@ -317,6 +317,18 @@ Every PR runs locally and in CI:
   suggest v2 idioms — `async void`, the `xunit` package instead of `xunit.v3`,
   `[Theory(DisplayName = ...)]`. Reject every v2 borrowing; v3's analyzer
   surfaces the rejection at build time but the diff review is faster.
+- All `ILogger` calls in production code must use `[LoggerMessage]`
+  source-generated methods, not the `LoggerExtensions.LogXxx(...)`
+  convenience overloads. CA1848 is treated as an error. Declare the
+  containing class `partial` and add a `static partial void` method
+  per log call. See the four handlers in
+  `src/CurrencyTracker.Api/ErrorHandling/` for the pattern.
+- `[LoggerMessage]` call sites must not pass `exception.GetType().FullName`
+  (or any non-trivial expression) as a log parameter — CA1873 flags it
+  as potentially-wasted work when the level is disabled. Pass the
+  `Exception` object itself; the source generator threads it into the
+  structured `@Exception` field which sinks render with the full type
+  name and stack trace, *only* when the level is enabled.
 
 ## How to update this file
 
