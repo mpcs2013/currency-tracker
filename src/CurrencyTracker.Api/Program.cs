@@ -1,6 +1,6 @@
 using CurrencyTracker.Application;
-using CurrencyTracker.Application.Messaging;
 using Wolverine;
+using Wolverine.Http;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -10,6 +10,7 @@ builder.UseWolverine(opts =>
 });
 
 builder.Services.AddOpenApi();
+builder.Services.AddWolverineHttp();
 
 var app = builder.Build();
 
@@ -18,10 +19,7 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
 }
 
-app.MapGet(
-    "/ping",
-    (IMessageBus bus, CancellationToken ct) => bus.InvokeAsync<string>(new PingQuery(), ct)
-);
+app.MapWolverineEndpoints();
 
 app.UseHttpsRedirection();
 

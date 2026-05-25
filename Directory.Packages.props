@@ -19,13 +19,15 @@
         <!-- Test -->
         <PackageVersion Include="NSubstitute" Version="5.3.0" />
         <!-- Test -->
-        <PackageVersion Include="xunit.v3" Version="3.2.2" />
-        <!-- Test -->
-        <PackageVersion Include="xunit.runner.visualstudio" Version="3.1.5" />
-        <!-- Test -->
         <PackageVersion Include="WolverineFx" Version="6.0.1" />
         <!-- Application, Api -->
+        <PackageVersion Include="WolverineFx.Http" Version="6.0.1" />
+        <!-- added in 5.7 -->
         <PackageVersion Include="WolverineFx.RuntimeCompilation" Version="6.0.1" />
         <!-- Api -->
+        <PackageVersion Include="xunit.runner.visualstudio" Version="3.1.5" />
+        <!-- Test -->
+        <PackageVersion Include="xunit.v3" Version="3.2.2" />
+        <!-- Test -->
     </ItemGroup>
 </Project>

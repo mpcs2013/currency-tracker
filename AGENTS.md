@@ -278,6 +278,10 @@ That is the entire ceremony. The full per-issue workflow lives in
   (Phase 5.)
 - **Don't auto-apply EF Core migrations on app start in production.** Local
   dev / Aspire only. (Phase 8.)
+- Don't modify AGENTS.md, workflow.md, prompts.md, domain.md, ports.md,
+  0001-stack-choices.md, or any file under docs/decisions/ unless the issue
+  explicitly names that file as the deliverable. Surface the proposed change
+  in the PR description instead.
 
 ## Quality gates
 

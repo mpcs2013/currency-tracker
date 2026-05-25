@@ -1,3 +1,5 @@
+using Wolverine.Http;
+
 namespace CurrencyTracker.Application.Messaging;
 
 /// <summary>
@@ -26,5 +28,6 @@ public static class PingHandler
     /// payload so the parameter is unused; it's named to make the
     /// handler-to-message binding obvious to readers.</param>
     /// <returns>The literal string <c>"pong"</c>.</returns>
+    [WolverineGet("/ping")]
     public static string Handle(PingQuery query) => "pong";
 }
