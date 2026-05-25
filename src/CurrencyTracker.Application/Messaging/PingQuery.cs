@@ -1,13 +1,42 @@
+using FluentValidation;
 using Wolverine.Http;
 
 namespace CurrencyTracker.Application.Messaging;
 
 /// <summary>
-/// Trivial diagnostic query that returns <c>"pong"</c>. Exists to
-/// exercise the Wolverine in-process dispatch path end-to-end without
-/// touching any I/O. The first real CQRS query lands in Phase 9.
+/// Trivial query used to prove the Wolverine dispatch pipeline. Carries
+/// an optional <paramref name="Message"/> (default empty string) so the
+/// Phase 6 validator has something to validate. Returns the string
+/// <c>"pong"</c> via <see cref="PingHandler.Handle(PingQuery)"/>.
 /// </summary>
-public sealed record PingQuery();
+/// <param name="Message">
+/// Opaque message passed through to the handler. Validated by
+/// <see cref="PingQueryValidator"/> — must be ≤ 100 characters.
+/// Default empty string preserves the parameterless <c>new PingQuery()</c>
+/// call site used by the unit test in Phase 5.6.
+/// </param>
+public sealed record PingQuery(string Message = "");
+
+/// <summary>
+/// Validator for <see cref="PingQuery"/>. Enforces a single rule:
+/// <c>Message.Length &lt;= 100</c>. Discovered by Wolverine's
+/// <c>opts.UseFluentValidation()</c> at host startup (Phase 6.3); not
+/// instantiated directly by application code outside tests.
+/// </summary>
+public sealed class PingQueryValidator : AbstractValidator<PingQuery>
+{
+    /// <summary>
+    /// Configures the validation rules. One rule today; the validator
+    /// would gain more if <see cref="PingQuery"/> grew more fields,
+    /// but the teaching point is the pipeline, not the rule.
+    /// </summary>
+    public PingQueryValidator()
+    {
+        RuleFor(x => x.Message)
+            .MaximumLength(100)
+            .WithMessage("Message must be 100 characters or fewer.");
+    }
+}
 
 /// <summary>
 /// Handler for <see cref="PingQuery"/>. Wolverine discovers this class

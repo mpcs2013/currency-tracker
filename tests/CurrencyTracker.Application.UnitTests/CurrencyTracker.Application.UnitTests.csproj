@@ -28,8 +28,4 @@
         <ProjectReference Include="..\..\src\CurrencyTracker.Domain\CurrencyTracker.Domain.csproj" />
         <ProjectReference Include="..\..\src\CurrencyTracker.Infrastructure\CurrencyTracker.Infrastructure.csproj" />
     </ItemGroup>
-
-    <ItemGroup>
-        <Folder Include="Messaging\" />
-    </ItemGroup>
 </Project>
