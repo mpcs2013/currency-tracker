@@ -1,4 +1,5 @@
 using CurrencyTracker.Application;
+using CurrencyTracker.Application.Messaging;
 using Wolverine;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -16,6 +17,11 @@ if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
 }
+
+app.MapGet(
+    "/ping",
+    (IMessageBus bus, CancellationToken ct) => bus.InvokeAsync<string>(new PingQuery(), ct)
+);
 
 app.UseHttpsRedirection();
 
