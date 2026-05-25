@@ -1,5 +1,10 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
     <ItemGroup>
+        <Compile Remove="Ping\**" />
+        <EmbeddedResource Remove="Ping\**" />
+        <None Remove="Ping\**" />
+    </ItemGroup>
+    <ItemGroup>
         <PackageReference Include="WolverineFx" />
         <PackageReference Include="WolverineFx.Http" />
     </ItemGroup>
