@@ -5,6 +5,7 @@
         <None Remove="Ping\**" />
     </ItemGroup>
     <ItemGroup>
+        <PackageReference Include="FluentValidation" />
         <PackageReference Include="WolverineFx" />
         <PackageReference Include="WolverineFx.Http" />
     </ItemGroup>
