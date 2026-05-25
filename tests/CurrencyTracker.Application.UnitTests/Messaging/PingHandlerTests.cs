@@ -3,8 +3,10 @@ using CurrencyTracker.Application.Messaging;
 namespace CurrencyTracker.Application.UnitTests.Messaging;
 
 /// <summary>
-/// Tests for <see cref="PingHandler"/> — the static Wolverine handler
-/// introduced in Phase 5. Called directly without a Wolverine host.
+/// Unit tests for <see cref="PingHandler"/>. The handler is a static
+/// method that returns <c>"pong"</c> for every <see cref="PingQuery"/>;
+/// the tests call it directly without a Wolverine host, demonstrating
+/// the property the static-method form was chosen for.
 /// </summary>
 public sealed class PingHandlerTests
 {
