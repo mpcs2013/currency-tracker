@@ -1,3 +1,4 @@
+using CurrencyTracker.Api.ErrorHandling;
 using CurrencyTracker.Application;
 using JasperFx;
 using Wolverine;
@@ -15,12 +16,17 @@ builder.UseWolverine(opts =>
 builder.Services.AddOpenApi();
 builder.Services.AddWolverineHttp();
 
+builder.Services.AddExceptionHandler<ValidationExceptionHandler>(); // ← added in 6.4
+builder.Services.AddExceptionHandler<GlobalExceptionHandler>(); // ← added in 6.4
+
 var app = builder.Build();
 
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
 }
+
+app.UseExceptionHandler(); // ← added in 6.4
 
 app.MapWolverineEndpoints();
 
