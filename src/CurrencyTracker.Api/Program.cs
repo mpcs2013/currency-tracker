@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using CurrencyTracker.Api.ErrorHandling;
 using CurrencyTracker.Application;
 using JasperFx;
@@ -15,6 +16,17 @@ builder.UseWolverine(opts =>
 
 builder.Services.AddOpenApi();
 builder.Services.AddWolverineHttp();
+
+builder.Services.AddProblemDetails(options =>
+{
+    options.CustomizeProblemDetails = ctx =>
+    {
+        var http = ctx.HttpContext;
+        var traceId = Activity.Current?.Id ?? http.TraceIdentifier;
+        ctx.ProblemDetails.Instance ??= $"{http.Request.Method} {http.Request.Path}";
+        ctx.ProblemDetails.Extensions["traceId"] = traceId;
+    };
+});
 
 builder.Services.AddExceptionHandler<ValidationExceptionHandler>(); // ← added in 6.4
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>(); // ← added in 6.4
