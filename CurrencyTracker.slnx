@@ -25,6 +25,7 @@
     <Project Path="src/CurrencyTracker.Worker/CurrencyTracker.Worker.csproj" />
   </Folder>
   <Folder Name="/tests/">
+    <Project Path="tests/CurrencyTracker.Api.IntegrationTests/CurrencyTracker.Api.IntegrationTests.csproj" />
     <Project Path="tests/CurrencyTracker.Application.UnitTests/CurrencyTracker.Application.UnitTests.csproj" />
     <Project Path="tests/CurrencyTracker.Architecture.Tests/CurrencyTracker.Architecture.Tests.csproj" />
     <Project Path="tests/CurrencyTracker.Domain.UnitTests/CurrencyTracker.Domain.UnitTests.csproj" />

@@ -1,6 +1,7 @@
 using CurrencyTracker.Application;
 using JasperFx;
 using Wolverine;
+using Wolverine.FluentValidation;
 using Wolverine.Http;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -8,6 +9,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.UseWolverine(opts =>
 {
     opts.ApplicationAssembly = typeof(ApplicationAssemblyAnchor).Assembly;
+    opts.UseFluentValidation();
 });
 
 builder.Services.AddOpenApi();
