@@ -309,6 +309,10 @@ Every PR runs locally and in CI:
   `dotnet new` — don't leave them in "for now". The TreatWarningsAsErrors
   flag in `Directory.Build.props` will not catch the cruft (it compiles
   cleanly); only a reviewer's eyes catch it.
+- `dotnet restore <project> --use-lock-file` will also generate
+  `packages.lock.json` files for referenced projects. If the issue only
+  expects specific lock files, delete the extra untracked ones before
+  committing.
 - xUnit v3 is the version this codebase uses (3.2.2+). Copilot will frequently
   suggest v2 idioms — `async void`, the `xunit` package instead of `xunit.v3`,
   `[Theory(DisplayName = ...)]`. Reject every v2 borrowing; v3's analyzer

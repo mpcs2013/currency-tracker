@@ -23,6 +23,16 @@
           "NewId": "4.0.1"
         }
       },
+      "WolverineFx.Http": {
+        "type": "Direct",
+        "requested": "[6.0.1, )",
+        "resolved": "6.0.1",
+        "contentHash": "WW0YRBZBHScH22JYH5z+SagVJxvnEmxwIvg1vi6vrDWJmuKbVoNCdup44i8JWDBM7dL0VzkMJDRHglpFOHxUBg==",
+        "dependencies": {
+          "Asp.Versioning.Abstractions": "[10.0.0, 11.0.0)",
+          "WolverineFx": "6.0.1"
+        }
+      },
       "WolverineFx.RuntimeCompilation": {
         "type": "Direct",
         "requested": "[6.0.1, )",
@@ -32,6 +42,11 @@
           "JasperFx.RuntimeCompiler": "5.0.0",
           "WolverineFx": "6.0.1"
         }
+      },
+      "Asp.Versioning.Abstractions": {
+        "type": "Transitive",
+        "resolved": "10.0.0",
+        "contentHash": "cMRE5nvNMfBgfkb0XFWst/7UtyXCjoAXnV0L4Scx4P9fcf0idgrj1Z0c+3ylsy01K4cOib7dKhCBfpg5z3r0Kg=="
       },
       "FastExpressionCompiler": {
         "type": "Transitive",
@@ -284,7 +299,8 @@
         "type": "Project",
         "dependencies": {
           "CurrencyTracker.Domain": "[1.0.0, )",
-          "WolverineFx": "[6.0.1, )"
+          "WolverineFx": "[6.0.1, )",
+          "WolverineFx.Http": "[6.0.1, )"
         }
       },
       "currencytracker.domain": {
