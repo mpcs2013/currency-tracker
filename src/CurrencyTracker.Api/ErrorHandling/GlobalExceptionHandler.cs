@@ -26,12 +26,7 @@ public sealed partial class GlobalExceptionHandler(
         CancellationToken cancellationToken
     )
     {
-        LogUnhandledException(
-            logger,
-            exception.GetType().FullName ?? "unknown",
-            httpContext.Request.Path,
-            exception
-        );
+        LogUnhandledException(logger, httpContext.Request.Path, exception);
 
         httpContext.Response.StatusCode = StatusCodes.Status500InternalServerError;
 
@@ -55,11 +50,10 @@ public sealed partial class GlobalExceptionHandler(
     [LoggerMessage(
         EventId = 1,
         Level = LogLevel.Error,
-        Message = "Unhandled exception of type {ExceptionType} at {RequestPath}"
+        Message = "Unhandled exception at {RequestPath}"
     )]
     static partial void LogUnhandledException(
         ILogger logger,
-        string exceptionType,
         PathString requestPath,
         Exception exception
     );
