@@ -22,8 +22,9 @@ builder.Services.AddProblemDetails(options =>
     options.CustomizeProblemDetails = ctx =>
     {
         var http = ctx.HttpContext;
+        var traceId = Activity.Current?.Id ?? http.TraceIdentifier;
         ctx.ProblemDetails.Instance ??= $"{http.Request.Method} {http.Request.Path}";
-        ctx.ProblemDetails.Extensions["traceId"] = Activity.Current?.Id ?? http.TraceIdentifier;
+        ctx.ProblemDetails.Extensions["traceId"] = traceId;
     };
 });
 
