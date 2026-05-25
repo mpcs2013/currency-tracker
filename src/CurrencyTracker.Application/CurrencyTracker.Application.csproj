@@ -1,5 +1,9 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
     <ItemGroup>
+        <PackageReference Include="WolverineFx" />
+    </ItemGroup>
+
+    <ItemGroup>
         <ProjectReference Include="..\CurrencyTracker.Domain\CurrencyTracker.Domain.csproj" />
     </ItemGroup>
 

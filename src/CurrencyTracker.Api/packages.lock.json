@@ -11,15 +11,91 @@
           "Microsoft.OpenApi": "2.0.0"
         }
       },
+      "WolverineFx": {
+        "type": "Direct",
+        "requested": "[6.0.1, )",
+        "resolved": "6.0.1",
+        "contentHash": "wcIZV81AAhEhfQlAr7DYiwo8qZS1sYnimjEbTGHLSMf7w93s+7Ka9gRXxme1+8blV0bP+E6QSsg6Dju/Oj/DGg==",
+        "dependencies": {
+          "JasperFx": "2.0.1",
+          "JasperFx.Events": "2.1.0",
+          "JasperFx.SourceGenerator": "2.0.1",
+          "NewId": "4.0.1"
+        }
+      },
+      "FastExpressionCompiler": {
+        "type": "Transitive",
+        "resolved": "5.4.1",
+        "contentHash": "nqMykMspK5cQd35Y8ulQzAujxCcCwZVUne32pC5xNpXqrbPCuKOPMWkKHJ3LveAZPm6dsVvump0TJ1SZ9RzfTQ=="
+      },
+      "ImTools": {
+        "type": "Transitive",
+        "resolved": "4.0.0",
+        "contentHash": "dms0JfLKC9AQbQX/EdpRjn59EjEvaCxIgv1z9YxbEQb5SiOVoo7vlIKdEySeEwUkWhN05rZnNpUpG+aw5VqPVQ=="
+      },
+      "JasperFx": {
+        "type": "Transitive",
+        "resolved": "2.0.1",
+        "contentHash": "pXnEPoCceuO/1gmUT8nWMMN3K/9JJqpSpykAMfrJ8a9bTXA04rNsc1N8GFqj53mXI/b2J1ZGNt/lf00aBFVvyw==",
+        "dependencies": {
+          "FastExpressionCompiler": "5.4.1",
+          "ImTools": "4.0.0",
+          "Microsoft.Bcl.TimeProvider": "10.0.0",
+          "Polly.Core": "8.6.5",
+          "Spectre.Console": "0.55.0"
+        }
+      },
+      "JasperFx.Events": {
+        "type": "Transitive",
+        "resolved": "2.1.0",
+        "contentHash": "3CfpLXCBZjMW9ki3GBRobqlRDEbITnEJRQpTPb+9/7YUWaNJsHrlAr++ht0QJhMlv/RiHYKi/bmnxhtJ4SxNKg==",
+        "dependencies": {
+          "JasperFx": "2.0.0"
+        }
+      },
+      "JasperFx.SourceGenerator": {
+        "type": "Transitive",
+        "resolved": "2.0.1",
+        "contentHash": "3I447sP6DLzjTwBupc1yzhQH465i1yu3SFyQ31wzQSj1BY/Zx5XpgTANhgjw5rt3Fm1xosiqpFk27HskZRRzNQ=="
+      },
+      "Microsoft.Bcl.TimeProvider": {
+        "type": "Transitive",
+        "resolved": "10.0.0",
+        "contentHash": "bUubrBD6tRJE3V1kvRloYc6NymH3R5oFKjAS9e0ELNx6u0ZR+zjps9dDQyjgqN/rArzl7f+21KGszj3YRN7F2Q=="
+      },
       "Microsoft.OpenApi": {
         "type": "Transitive",
         "resolved": "2.0.0",
         "contentHash": "GGYLfzV/G/ct80OZ45JxnWP7NvMX1BCugn/lX7TH5o0lcVaviavsLMTxmFV2AybXWjbi3h6FF1vgZiTK6PXndw=="
       },
+      "NewId": {
+        "type": "Transitive",
+        "resolved": "4.0.1",
+        "contentHash": "jegBasNndmG21G3BmT51suFDCIz/sLN81j+IxmkZ4iWoaDi8LygeHiyNnYbXz5OQh9nCRJFIx1+PJrlYi1Gc9Q=="
+      },
+      "Polly.Core": {
+        "type": "Transitive",
+        "resolved": "8.6.5",
+        "contentHash": "t+sUVrIwvo7UmsgHGgOG9F0GDZSRIm47u2ylH17Gvcv1q5hNEwgD5GoBlFyc0kh/pebmPyrAgvGsR/65ZBaXlg=="
+      },
+      "Spectre.Console": {
+        "type": "Transitive",
+        "resolved": "0.55.0",
+        "contentHash": "2TVhUHFsDux0Z+y2Hv4bFsOMuON4SuotEEKkMparFkp5Rm259naaaEQrN4Sv6C1cbsiGKPjfkJDGgUp+hZPjTw==",
+        "dependencies": {
+          "Spectre.Console.Ansi": "0.55.0"
+        }
+      },
+      "Spectre.Console.Ansi": {
+        "type": "Transitive",
+        "resolved": "0.55.0",
+        "contentHash": "GIfgOvuF8MpU52bprhwtDEtx0gmVIGOepM8bw0lH/TSMD0rg1Xp+5Y53kPG8rFVdcpbNANlhDQ5mEVVPO3/2Tg=="
+      },
       "currencytracker.application": {
         "type": "Project",
         "dependencies": {
-          "CurrencyTracker.Domain": "[1.0.0, )"
+          "CurrencyTracker.Domain": "[1.0.0, )",
+          "WolverineFx": "[6.0.1, )"
         }
       },
       "currencytracker.domain": {
