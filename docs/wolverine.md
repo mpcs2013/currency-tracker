@@ -45,3 +45,24 @@ holds a registered `IMessageBus`):
 ```csharp
 app.MapGet("/something", (IMessageBus bus, CancellationToken ct) =>
     bus.InvokeAsync<string>(new PingQuery(), ct));
+```
+
+## Diagnostics
+
+JasperFx's command-line integration (wired via `RunJasperFxCommands` in
+`Program.cs`) exposes a `describe` command that prints every discovered
+handler, every routed message, every HTTP endpoint, and every configured
+Wolverine option. To capture it locally:
+
+1. Publish a local debug build:
+       dotnet publish src/CurrencyTracker.Api -c Debug -o ./publish-debug
+2. Invoke the published exe directly (Windows cmd.exe shown; equivalent
+   path on macOS/Linux):
+       publish-debug\CurrencyTracker.Api.exe describe --file docs\wolverine-describe.txt
+
+The current capture lives at [`docs/wolverine-describe-phase-5.txt`](./wolverine-describe-phase-5.txt).
+
+Refresh the capture each time the Wolverine surface area materially
+changes — Phases 6, 9, and 12 are good moments. Do *not* use
+`dotnet run -- describe`; on Windows PowerShell the `--` separator is
+swallowed and the host starts normally instead of running the command.

@@ -5,6 +5,11 @@
         <IsTestProject>true</IsTestProject>
         <UseMicrosoftTestingPlatformRunner>true</UseMicrosoftTestingPlatformRunner>
     </PropertyGroup>
+    <ItemGroup>
+        <Compile Remove="Ping\**" />
+        <EmbeddedResource Remove="Ping\**" />
+        <None Remove="Ping\**" />
+    </ItemGroup>
 
     <ItemGroup>
         <PackageReference Include="coverlet.collector" />
@@ -22,5 +27,9 @@
         <ProjectReference Include="..\..\src\CurrencyTracker.Application\CurrencyTracker.Application.csproj" />
         <ProjectReference Include="..\..\src\CurrencyTracker.Domain\CurrencyTracker.Domain.csproj" />
         <ProjectReference Include="..\..\src\CurrencyTracker.Infrastructure\CurrencyTracker.Infrastructure.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <Folder Include="Messaging\" />
     </ItemGroup>
 </Project>

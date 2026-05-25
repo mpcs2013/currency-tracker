@@ -1,0 +1,286 @@
+── About CurrencyTracker.Api ───────────────────────────────────────────────────────────────────────────────────────────
+
+          Entry Assembly:  CurrencyTracker.Api                                                                       
+                 Version:  1.0.0.0                                                                                   
+        Application Name:  CurrencyTracker.Api                                                                       
+             Environment:  Production                                                                                
+       Content Root Path:  C:\Users\marco\source\repos\dev\currency-tracker\src\CurrencyTracker.Api\bin\Debug\net10.0
+AppContext.BaseDirectory:  C:\Users\marco\source\repos\dev\currency-tracker\src\CurrencyTracker.Api\bin\Debug\net10.0
+                           \                                                                                         
+── IConfiguration Preview ──────────────────────────────────────────────────────────────────────────────────────────────
+
+├── ALLUSERSPROFILE C:\ProgramData (EnvironmentVariablesConfigurationProvider)
+├── APPDATA C:\Users\marco\AppData\Roaming (EnvironmentVariablesConfigurationProvider)
+├── applicationName CurrencyTracker.Api (Microsoft.Extensions.Configuration.ChainedConfigurationProvider)
+├── CommonProgramFiles C:\Program Files\Common Files (EnvironmentVariablesConfigurationProvider)
+├── CommonProgramFiles(x86) C:\Program Files (x86)\Common Files (EnvironmentVariablesConfigurationProvider)
+├── CommonProgramW6432 C:\Program Files\Common Files (EnvironmentVariablesConfigurationProvider)
+├── COMPUTERNAME MS-DESKTOP (EnvironmentVariablesConfigurationProvider)
+├── ComSpec C:\WINDOWS\system32\cmd.exe (EnvironmentVariablesConfigurationProvider)
+├── contentRoot C:\Users\marco\source\repos\dev\currency-tracker\src\CurrencyTracker.A (MemoryConfigurationProvider)
+│               pi\bin\Debug\net10.0                                                                                
+├── DriverData C:\Windows\System32\Drivers\DriverData (EnvironmentVariablesConfigurationProvider)
+├── EFC_16896_1262719628 1     (EnvironmentVariablesConfigurationProvider)
+├── EFC_16896_1592913036 1     (EnvironmentVariablesConfigurationProvider)
+├── EFC_16896_2283032206 1     (EnvironmentVariablesConfigurationProvider)
+├── EFC_16896_2775293581 1     (EnvironmentVariablesConfigurationProvider)
+├── EFC_16896_3789132940 1     (EnvironmentVariablesConfigurationProvider)
+├── EFC_16896_4126798990 1     (EnvironmentVariablesConfigurationProvider)
+├── file docs\wolverine-describe.txt (CommandLineConfigurationProvider)
+│   └── docs\wolverine-describe.txt (CommandLineConfigurationProvider)
+├── FPS_BROWSER_APP_PROFILE_STRING Internet Explorer (EnvironmentVariablesConfigurationProvider)
+├── FPS_BROWSER_USER_PROFILE_STRING Default (EnvironmentVariablesConfigurationProvider)
+├── HOMEDRIVE C:    (EnvironmentVariablesConfigurationProvider)
+├── HOMEPATH \Users\marco (EnvironmentVariablesConfigurationProvider)
+├── hostingStartupAssemblies
+├── hostingStartupExcludeAssemblies
+├── LOCALAPPDATA C:\Users\marco\AppData\Local (EnvironmentVariablesConfigurationProvider)
+├── Logging
+│   └── LogLevel
+│       ├── Default Information (JsonConfigurationProvider for 'appsettings.json' (Optional))
+│       └── Microsoft.AspNetCore Warning (JsonConfigurationProvider for 'appsettings.json' (Optional))
+├── LOGONSERVER \\MS-DESKTOP (EnvironmentVariablesConfigurationProvider)
+├── NUMBER_OF_PROCESSORS 8     (EnvironmentVariablesConfigurationProvider)
+├── OneDrive C:\Users\marco\OneDrive (EnvironmentVariablesConfigurationProvider)
+├── OS  Windows_NT (EnvironmentVariablesConfigurationProvider)
+├── Path C:\Program Files (x86)\NVIDIA                                   (EnvironmentVariablesConfigurationProvider)
+│        Corporation\PhysX\Common;C:\WINDOWS\system32;C:\WINDOWS;C:\WIND                                            
+│        OWS\System32\Wbem;C:\WINDOWS\System32\WindowsPowerShell\v1.0\;C                                            
+│        :\WINDOWS\System32\OpenSSH\;C:\Program Files\Microsoft SQL                                                 
+│        Server\170\Tools\Binn\;C:\Program Files\Git\cmd;C:\Program                                                 
+│        Files\Microsoft SQL Server\Client                                                                          
+│        SDK\ODBC\170\Tools\Binn\;C:\Program Files\dotnet\;C:\Program                                               
+│        Files\GitHub CLI\;C:\Program                                                                               
+│        Files\Docker\Docker\resources\bin;C:\Users\marco\.local\bin;C:\                                            
+│        Users\marco\AppData\Local\Microsoft\WindowsApps;C:\Users\marco\                                            
+│        .dotnet\tools;C:\Users\marco\AppData\Local\Python\bin;C:\Users\                                            
+│        marco\AppData\Local\GitHubDesktop\bin                                                                      
+├── PATHEXT .COM;.EXE;.BAT;.CMD;.VBS;.VBE;.JS;.JSE;.WSF;.WSH;.MSC (EnvironmentVariablesConfigurationProvider)
+├── preventHostingStartup
+├── PROCESSOR_ARCHITECTURE AMD64 (EnvironmentVariablesConfigurationProvider)
+├── PROCESSOR_IDENTIFIER Intel64 Family 6 Model 158 Stepping 13,         (EnvironmentVariablesConfigurationProvider)
+│                        GenuineIntel                                                                               
+├── PROCESSOR_LEVEL 6     (EnvironmentVariablesConfigurationProvider)
+├── PROCESSOR_REVISION 9e0d  (EnvironmentVariablesConfigurationProvider)
+├── ProgramData C:\ProgramData (EnvironmentVariablesConfigurationProvider)
+├── ProgramFiles C:\Program Files (EnvironmentVariablesConfigurationProvider)
+├── ProgramFiles(x86) C:\Program Files (x86) (EnvironmentVariablesConfigurationProvider)
+├── ProgramW6432 C:\Program Files (EnvironmentVariablesConfigurationProvider)
+├── PROMPT $P$G  (EnvironmentVariablesConfigurationProvider)
+├── PSModulePath C:\Program                                              (EnvironmentVariablesConfigurationProvider)
+│                Files\WindowsPowerShell\Modules;C:\WINDOWS\system32\Win                                            
+│                dowsPowerShell\v1.0\Modules                                                                        
+├── PUBLIC C:\Users\Public (EnvironmentVariablesConfigurationProvider)
+├── SESSIONNAME Console (EnvironmentVariablesConfigurationProvider)
+├── SystemDrive C:    (EnvironmentVariablesConfigurationProvider)
+├── SystemRoot C:\WINDOWS (EnvironmentVariablesConfigurationProvider)
+├── TEMP C:\Users\marco\AppData\Local\Temp (EnvironmentVariablesConfigurationProvider)
+├── TMP C:\Users\marco\AppData\Local\Temp (EnvironmentVariablesConfigurationProvider)
+├── USERDOMAIN MS-DESKTOP (EnvironmentVariablesConfigurationProvider)
+├── USERDOMAIN_ROAMINGPROFILE MS-DESKTOP (EnvironmentVariablesConfigurationProvider)
+├── USERNAME marco (EnvironmentVariablesConfigurationProvider)
+├── USERPROFILE C:\Users\marco (EnvironmentVariablesConfigurationProvider)
+├── windir C:\WINDOWS (EnvironmentVariablesConfigurationProvider)
+└── ZES_ENABLE_SYSMAN 1     (EnvironmentVariablesConfigurationProvider)
+── Referenced Assemblies ───────────────────────────────────────────────────────────────────────────────────────────────
+
+┌───────────────────────────────────────────────────────┬──────────┐
+│ Assembly Name                                         │ Version  │
+├───────────────────────────────────────────────────────┼──────────┤
+│ System.Runtime                                        │ 10.0.0.0 │
+│ Microsoft.AspNetCore.Mvc.Core                         │ 10.0.0.0 │
+│ Microsoft.AspNetCore                                  │ 10.0.0.0 │
+│ Wolverine                                             │ 6.0.1.0  │
+│ System.Collections                                    │ 10.0.0.0 │
+│ Microsoft.AspNetCore.OpenApi                          │ 10.0.8.0 │
+│ Microsoft.OpenApi                                     │ 2.0.0.0  │
+│ Microsoft.AspNetCore.Mvc.Abstractions                 │ 10.0.0.0 │
+│ System.Text.Json                                      │ 10.0.0.0 │
+│ Microsoft.Extensions.DependencyInjection.Abstractions │ 10.0.0.0 │
+│ System.Runtime.InteropServices                        │ 10.0.0.0 │
+│ System.Linq                                           │ 10.0.0.0 │
+│ System.Console                                        │ 10.0.0.0 │
+│ Microsoft.Extensions.Hosting.Abstractions             │ 10.0.0.0 │
+│ Wolverine.Http                                        │ 6.0.1.0  │
+│ Microsoft.AspNetCore.Hosting.Abstractions             │ 10.0.0.0 │
+│ Microsoft.AspNetCore.Http.Abstractions                │ 10.0.0.0 │
+│ Microsoft.AspNetCore.Routing                          │ 10.0.0.0 │
+│ Microsoft.AspNetCore.HttpsPolicy                      │ 10.0.0.0 │
+│ JasperFx                                              │ 2.0.1.0  │
+│ CurrencyTracker.Application                           │ 1.0.0.0  │
+└───────────────────────────────────────────────────────┴──────────┘
+── JasperFx Options ────────────────────────────────────────────────────────────────────────────────────────────────────
+
+JasperFx.JasperFxOptions
+├── ApplicationAssembly: CurrencyTracker.Api 1.0.0.0
+├── AutoResolveProjectRoot: False
+├── DefaultCommand: run
+├── DevelopmentEnvironmentName: Development
+├── Factory: None
+├── GeneratedCodeOutputPath: 
+│   C:\Users\marco\source\repos\dev\currency-tracker\src\CurrencyTracker.Api\bin\Debug\net10.0\Internal\Generated
+├── OptionsFile: None
+├── ServiceName: CurrencyTracker.Api
+├── SubjectUri: system://jasperfx/
+├── TenantIdStyle: CaseSensitive
+├── Title: JasperFx Options
+├── ActiveProfile
+│   ├── AssertAllPreGeneratedTypesExist: False
+│   ├── GeneratedCodeMode: Dynamic
+│   ├── GeneratedCodeOutputPath: 
+│   │   C:\Users\marco\source\repos\dev\currency-tracker\src\CurrencyTracker.Api\bin\Debug\net10.0\Internal\Generated
+│   ├── ResourceAutoCreate: CreateOrUpdate
+│   └── SourceCodeWritingEnabled: True
+├── Development
+│   ├── AssertAllPreGeneratedTypesExist: False
+│   ├── GeneratedCodeMode: Dynamic
+│   ├── GeneratedCodeOutputPath: 
+│   │   C:\Users\marco\source\repos\dev\currency-tracker\src\CurrencyTracker.Api\bin\Debug\net10.0\Internal\Generated
+│   ├── ResourceAutoCreate: CreateOrUpdate
+│   └── SourceCodeWritingEnabled: True
+└── Production
+    ├── AssertAllPreGeneratedTypesExist: False
+    ├── GeneratedCodeMode: Dynamic
+    ├── GeneratedCodeOutputPath: 
+    │   C:\Users\marco\source\repos\dev\currency-tracker\src\CurrencyTracker.Api\bin\Debug\net10.0\Internal\Generated
+    ├── ResourceAutoCreate: CreateOrUpdate
+    └── SourceCodeWritingEnabled: True
+── Wolverine ───────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+Wolverine Options
+Service Name: CurrencyTracker.Api
+├── DefaultExecutionTimeout
+│   └── 00:01:00
+├── AutoBuildMessageStorageOnStartup
+│   └── CreateOrUpdate
+├── TypeLoadMode
+│   └── Dynamic
+├── ExternalTransportsAreStubbed
+│   └── True
+├── Assemblies
+│   ├── CurrencyTracker.Application (application)
+│   └── Wolverine.RuntimeCompilation
+├── Extensions
+│   ├── Wolverine.RuntimeCompilation.RuntimeCompilationModule
+│   └── Wolverine.LambdaWolverineExtension
+└── Serializers
+    └── ┌──────────────────┬────────────────────────────────────┐
+        │ Content Type     │ Serializer                         │
+        ├──────────────────┼────────────────────────────────────┤
+        │ binary/envelope  │ EnvelopeReaderWriter               │
+        │ binary/wolverine │ IntrinsicSerializer                │
+        │ application/json │ SystemTextJsonSerializer (default) │
+        └──────────────────┴────────────────────────────────────┘
+Wolverine.Http.HttpGraph
+├── ChildNamespace: WolverineHandlers
+└── Endpoints
+    └── ┌───────┬─────────────────────────────────────────────────────────────────────┬─────────────┐
+        │ Route │ Endpoint                                                            │ HttpMethods │
+        ├───────┼─────────────────────────────────────────────────────────────────────┼─────────────┤
+        │ /ping │ CurrencyTracker.Application.Messaging.PingHandler.Handle(PingQuery) │ GET         │
+        └───────┴─────────────────────────────────────────────────────────────────────┴─────────────┘
+
+Handler Discovery Rules
+├── Assemblies
+│   ├── Wolverine.RuntimeCompilation
+│   └── CurrencyTracker.Application
+├── Handler Type Rules
+│   ├── Include:
+│   │   ├── Name ends with 'Handler'
+│   │   ├── Name ends with 'Consumer'
+│   │   ├── Inherits from Wolverine.Saga
+│   │   ├── Implements Wolverine.IWolverineHandler
+│   │   └── Has attribute Wolverine.Attributes.WolverineHandlerAttribute
+│   └── Exclude:
+│       ├── Not GeneratedStreamStateQueryHandler
+│       ├── Is not a public type
+│       └── Has attribute Wolverine.Attributes.WolverineIgnoreAttribute
+└── Handler Method Rules
+    ├── Include:
+    │   ├── Method name is 'Handle' (case sensitive)
+    │   ├── Method name is 'HandleAsync' (case sensitive)
+    │   ├── Method name is 'Handles' (case sensitive)
+    │   ├── Method name is 'HandlesAsync' (case sensitive)
+    │   ├── Method name is 'Consume' (case sensitive)
+    │   ├── Method name is 'ConsumeAsync' (case sensitive)
+    │   ├── Method name is 'Consumes' (case sensitive)
+    │   ├── Method name is 'ConsumesAsync' (case sensitive)
+    │   ├── Method name is 'Orchestrate' (case sensitive)
+    │   ├── Method name is 'OrchestrateAsync' (case sensitive)
+    │   ├── Method name is 'Orchestrates' (case sensitive)
+    │   ├── Method name is 'OrchestratesAsync' (case sensitive)
+    │   ├── Method name is 'Start' (case sensitive)
+    │   ├── Method name is 'StartAsync' (case sensitive)
+    │   ├── Method name is 'Starts' (case sensitive)
+    │   ├── Method name is 'StartsAsync' (case sensitive)
+    │   ├── Method name is 'StartOrHandle' (case sensitive)
+    │   ├── Method name is 'StartOrHandleAsync' (case sensitive)
+    │   ├── Method name is 'StartsOrHandles' (case sensitive)
+    │   ├── Method name is 'StartsOrHandlesAsync' (case sensitive)
+    │   ├── Method name is 'NotFound' (case sensitive)
+    │   ├── Method name is 'NotFoundAsync' (case sensitive)
+    │   └── Has attribute [WolverineHandler]
+    └── Exclude:
+        ├── Method is declared by object
+        ├── IDisposable.Dispose()
+        ├── IAsyncDisposable.DisposeAsync()
+        ├── Contains Generic Parameters
+        ├── Special Name
+        ├── Has attribute [WolverineIgnore]
+        ├── Has no arguments
+        ├── Cannot determine a valid message type
+        └── Returns a primitive type
+
+                                                    Message Handlers                                                    
+┌─────────────────┬─────────────────────────────────────────┬─────────────────────────────────────────┬────────────────┐
+│ Message Name    │ Message Type                            │ Handler.Method()                        │ Generated Type │
+│                 │   namespace                             │   namespace                             │ Name           │
+├─────────────────┼─────────────────────────────────────────┼─────────────────────────────────────────┼────────────────┤
+│ CurrencyTracker │ PingQuery                               │ PingHandler.Handle(query)               │ PingQueryHandl │
+│ .Application.Me │   CurrencyTracker.Application.Messaging │   CurrencyTracker.Application.Messaging │ er1721523885   │
+│ ssaging.PingQue │                                         │                                         │                │
+│ ry              │                                         │                                         │                │
+└─────────────────┴─────────────────────────────────────────┴─────────────────────────────────────────┴────────────────┘
+
+                                                    Message Routing                                                     
+┌────────────────────────────────────────────┬────────────────────────────────────────────┬─────────────┬──────────────┐
+│ .NET Type                                  │ Message Type Alias                         │ Destination │ Content Type │
+├────────────────────────────────────────────┼────────────────────────────────────────────┼─────────────┼──────────────┤
+│ CurrencyTracker.Application.Messaging.Ping │ CurrencyTracker.Application.Messaging.Ping │ No Routes   │ n/a          │
+│ Query                                      │ Query                                      │             │              │
+│ string                                     │ System.String                              │ No Routes   │ n/a          │
+└────────────────────────────────────────────┴────────────────────────────────────────────┴─────────────┴──────────────┘
+
+                                             Senders                                             
+┌──────────────────┬─────────┬──────────────────┬───────────────────────────────────────────────┐
+│ Uri              │ Name    │ Mode             │ Serializer(s)                                 │
+├──────────────────┼─────────┼──────────────────┼───────────────────────────────────────────────┤
+│ local://agents/  │ agents  │ BufferedInMemory │ IntrinsicSerializer, SystemTextJsonSerializer │
+│ local://durable/ │ durable │ Durable          │ IntrinsicSerializer, SystemTextJsonSerializer │
+└──────────────────┴─────────┴──────────────────┴───────────────────────────────────────────────┘
+
+                                                       Listeners                                                        
+┌────────────────────┬───────────┬──────────────────┬────────────────────────┬─────────────────────────────────────────┐
+│ Uri                │ Name      │ Mode             │ MaxDegreeOfParallelism │ Serializers                             │
+├────────────────────┼───────────┼──────────────────┼────────────────────────┼─────────────────────────────────────────┤
+│ local://agents/    │ agents    │ BufferedInMemory │ 20                     │ IntrinsicSerializer,                    │
+│                    │           │                  │                        │ SystemTextJsonSerializer                │
+│ local://default/   │ default   │ BufferedInMemory │ 8                      │ IntrinsicSerializer,                    │
+│                    │           │                  │                        │ SystemTextJsonSerializer                │
+│ local://durable/   │ durable   │ Durable          │ 8                      │ IntrinsicSerializer,                    │
+│                    │           │                  │                        │ SystemTextJsonSerializer                │
+│ stub://replies/    │ replies   │ BufferedInMemory │ 8                      │ IntrinsicSerializer,                    │
+│                    │           │                  │                        │ SystemTextJsonSerializer                │
+│ local://replies/   │ replies   │ BufferedInMemory │ 8                      │ IntrinsicSerializer,                    │
+│                    │           │                  │                        │ SystemTextJsonSerializer                │
+│ local://scheduled/ │ scheduled │ Durable          │ 8                      │ IntrinsicSerializer,                    │
+│                    │           │                  │                        │ SystemTextJsonSerializer                │
+└────────────────────┴───────────┴──────────────────┴────────────────────────┴─────────────────────────────────────────┘
+
+Error HandlingFailure rules specific to a message type
+are applied before the global failure rules
+
+Global Failure Rules
+└── Exception is Wolverine.Persistence.Durability.DuplicateIncomingEnvelopeException
+    ├── Discard the message
+    └── Move to Error Queue

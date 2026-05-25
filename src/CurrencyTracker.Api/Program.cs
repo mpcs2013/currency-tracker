@@ -1,4 +1,5 @@
 using CurrencyTracker.Application;
+using JasperFx;
 using Wolverine;
 using Wolverine.Http;
 
@@ -23,4 +24,6 @@ app.MapWolverineEndpoints();
 
 app.UseHttpsRedirection();
 
-app.Run();
+//app.Run();
+
+return await app.RunJasperFxCommands(args);

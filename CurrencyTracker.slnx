@@ -3,6 +3,7 @@
     <File Path="docs/domain.md" />
     <File Path="docs/ports.md" />
     <File Path="docs/prompts.md" />
+    <File Path="docs/wolverine.md" />
     <File Path="docs/workflow.md" />
   </Folder>
   <Folder Name="/docs/decisions/">
