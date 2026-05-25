@@ -278,6 +278,10 @@ That is the entire ceremony. The full per-issue workflow lives in
   (Phase 5.)
 - **Don't auto-apply EF Core migrations on app start in production.** Local
   dev / Aspire only. (Phase 8.)
+- Don't modify AGENTS.md, workflow.md, prompts.md, domain.md, ports.md,
+  0001-stack-choices.md, or any file under docs/decisions/ unless the issue
+  explicitly names that file as the deliverable. Surface the proposed change
+  in the PR description instead.
 
 ## Quality gates
 
@@ -309,10 +313,6 @@ Every PR runs locally and in CI:
   `dotnet new` — don't leave them in "for now". The TreatWarningsAsErrors
   flag in `Directory.Build.props` will not catch the cruft (it compiles
   cleanly); only a reviewer's eyes catch it.
-- `dotnet restore <project> --use-lock-file` will also generate
-  `packages.lock.json` files for referenced projects. If the issue only
-  expects specific lock files, delete the extra untracked ones before
-  committing.
 - xUnit v3 is the version this codebase uses (3.2.2+). Copilot will frequently
   suggest v2 idioms — `async void`, the `xunit` package instead of `xunit.v3`,
   `[Theory(DisplayName = ...)]`. Reject every v2 borrowing; v3's analyzer
