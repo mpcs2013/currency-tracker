@@ -2,7 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-05-18
-- **Authors:** @your-handle
+- **Authors:** Marco Silva
 
 ## Context
 

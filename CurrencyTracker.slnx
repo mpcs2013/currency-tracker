@@ -1,4 +1,14 @@
 <Solution>
+  <Folder Name="/docs/">
+    <File Path="docs/domain.md" />
+    <File Path="docs/ports.md" />
+    <File Path="docs/prompts.md" />
+    <File Path="docs/workflow.md" />
+  </Folder>
+  <Folder Name="/docs/decisions/">
+    <File Path="docs/decisions/0001-stack-choices.md" />
+    <File Path="docs/decisions/0003-wolverine-no-marker-interfaces.md" />
+  </Folder>
   <Folder Name="/Solution Items/">
     <File Path=".editorconfig" />
     <File Path="AGENTS.md" />
