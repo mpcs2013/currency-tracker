@@ -1,5 +1,6 @@
 using System.Reflection;
 using CurrencyTracker.Api;
+using CurrencyTracker.AppHost;
 using CurrencyTracker.Application;
 using CurrencyTracker.Domain;
 using CurrencyTracker.Infrastructure;
@@ -185,6 +186,44 @@ public sealed class LayerBoundaryTests
             .BeTrue(
                 because: $"Src projects must not reference test-only packages or namespaces. "
                     + $"Failing types across src assemblies: {failingTypeNames}"
+            );
+    }
+
+    /// <summary>
+    /// AppHost is an Aspire orchestrator. It references Api and Worker so
+    /// the Aspire SDK can generate <c>Projects.CurrencyTracker_Api</c> and
+    /// <c>Projects.CurrencyTracker_Worker</c>; both references are
+    /// orchestration-only and do not run in Azure (Phase 14 deploys Api
+    /// and Worker directly). The architectural constraint is that AppHost
+    /// must <em>not</em> reference any of the layer projects
+    /// (<c>Application</c>, <c>Infrastructure</c>, <c>Domain</c>); doing so
+    /// would let business code accumulate in the orchestrator and break
+    /// the "AppHost is orchestration only" rule in ADR 0002.
+    /// </summary>
+    [Fact]
+    public void AppHost_references_only_Api_and_Worker()
+    {
+        var result = Types
+            .InAssembly(typeof(AppHostAssemblyAnchor).Assembly)
+            .Should()
+            .NotHaveDependencyOnAny(
+                "CurrencyTracker.Application",
+                "CurrencyTracker.Infrastructure",
+                "CurrencyTracker.Domain"
+            )
+            .GetResult();
+
+        var failingTypeNames = result.FailingTypes is null
+            ? "(none)"
+            : string.Join(", ", result.FailingTypes.Select(t => t.FullName));
+
+        result
+            .IsSuccessful.Should()
+            .BeTrue(
+                because: $"AppHost is an Aspire orchestrator; it must reference only "
+                    + $"Api and Worker (so the Aspire SDK can generate Projects.* "
+                    + $"handles), never the layer projects. Failing types in "
+                    + $"CurrencyTracker.AppHost: {failingTypeNames}"
             );
     }
 }
