@@ -30,6 +30,10 @@
     <Project Path="src/CurrencyTracker.Application/CurrencyTracker.Application.csproj" />
     <Project Path="src/CurrencyTracker.Domain/CurrencyTracker.Domain.csproj" />
     <Project Path="src/CurrencyTracker.Infrastructure/CurrencyTracker.Infrastructure.csproj" />
+    <Project
+      Path="src/CurrencyTracker.ServiceDefaults/CurrencyTracker.ServiceDefaults.csproj"
+      Id="a3444b57-38aa-4a40-b034-cee02957ea96"
+    />
     <Project Path="src/CurrencyTracker.Worker/CurrencyTracker.Worker.csproj" />
   </Folder>
   <Folder Name="/tests/">
