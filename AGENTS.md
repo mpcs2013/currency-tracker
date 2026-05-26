@@ -56,11 +56,20 @@ src/CurrencyTracker.Worker          ← references Infrastructure + Application
                                        (does NOT reference Api)
 
 src/CurrencyTracker.AppHost         ← Phase 7 addition (Aspire orchestrator);
-                                       references nothing from src/ at build
-                                       time — references Api and Worker only
-                                       at run time via Aspire resources
+                                       references Api and Worker for the
+                                       Aspire SDK to generate Projects.*
+                                       handles; never references Application,
+                                       Infrastructure, or Domain; never runs
+                                       in Azure (Phase 14 deploys Api and
+                                       Worker directly)
 
+src/CurrencyTracker.ServiceDefaults ← Phase 7 addition (Aspire shared
+                                       library); referenced by Api and
+                                       Worker; owns OTel + health +
+                                       resilience defaults; deployed with
+                                       each host that references it
 ```
+
 
 | Project          | References                 | Outbound NuGet (Phase 2.1)       | Composition root? |
 | ---------------- | -------------------------- | -------------------------------- | ----------------- |
@@ -69,6 +78,8 @@ src/CurrencyTracker.AppHost         ← Phase 7 addition (Aspire orchestrator);
 | `Infrastructure` | `Application`, `Domain`    | (none — Phase 8+ adds EF Core)   | No                |
 | `Api`            | `Infrastructure`, `App.`, `Dom.` | `Microsoft.AspNetCore.OpenApi` | Yes (HTTP)        |
 | `Worker`         | `Infrastructure`, `App.`, `Dom.` | (none — Phase 12 adds Wolverine) | Yes (jobs)        |
+| `AppHost`        | `Api`, `Worker` (run-time only)  | `Aspire.Hosting.PostgreSQL`, `Aspire.Hosting.Redis` (SDK adds `Aspire.Hosting.AppHost`) | No |
+| `ServiceDefaults`| (none of the layer projects)     | `Microsoft.Extensions.Http.Resilience`, `Microsoft.Extensions.ServiceDiscovery`, `OpenTelemetry.*` family | No |
 
 **Reading the table:** `Api` and `Worker` are the only rows with **Yes**
 in the last column. That's the rule: composition roots compose, layers
@@ -329,6 +340,15 @@ Every PR runs locally and in CI:
   `Exception` object itself; the source generator threads it into the
   structured `@Exception` field which sinks render with the full type
   name and stack trace, *only* when the level is enabled.
+- Don't add Postgres or Redis connection strings to
+  `src/CurrencyTracker.Api/appsettings.json` or
+  `src/CurrencyTracker.Worker/appsettings.json`. Aspire injects them as
+  `ConnectionStrings__currencytracker` and `ConnectionStrings__cache`
+  environment variables when the AppHost launches each project;
+  `IConfiguration.GetConnectionString("currencytracker")` resolves to
+  the injected value automatically. A connection string in
+  `appsettings.json` would shadow the Aspire-injected one and break the
+  local-vs-Azure parity story Phase 14's Key Vault flow depends on.
 
 ## How to update this file
 
