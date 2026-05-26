@@ -14,5 +14,6 @@
         <ProjectReference Include="..\CurrencyTracker.Application\CurrencyTracker.Application.csproj" />
         <ProjectReference Include="..\CurrencyTracker.Infrastructure\CurrencyTracker.Infrastructure.csproj" />
         <ProjectReference Include="..\CurrencyTracker.Domain\CurrencyTracker.Domain.csproj" />
+        <ProjectReference Include="..\CurrencyTracker.ServiceDefaults\CurrencyTracker.ServiceDefaults.csproj" />
     </ItemGroup>
 </Project>

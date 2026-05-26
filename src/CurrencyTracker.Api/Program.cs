@@ -1,12 +1,15 @@
 using System.Diagnostics;
 using CurrencyTracker.Api.ErrorHandling;
 using CurrencyTracker.Application;
+using CurrencyTracker.ServiceDefaults;
 using JasperFx;
 using Wolverine;
 using Wolverine.FluentValidation;
 using Wolverine.Http;
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.AddServiceDefaults();
 
 builder.UseWolverine(opts =>
 {
@@ -34,6 +37,8 @@ builder.Services.AddExceptionHandler<DomainExceptionHandler>(); // ← added in 
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>(); // ← added in 6.4
 
 var app = builder.Build();
+
+app.MapDefaultEndpoints();
 
 if (app.Environment.IsDevelopment())
 {
