@@ -13,7 +13,20 @@
 
 var builder = DistributedApplication.CreateBuilder(args);
 
-// Resources land in 7.3 and 7.4.
+// Postgres server with a named data volume so local data persists across
+// AppHost restarts. The named volume "currencytracker-pgdata" scopes the
+// volume to this project; remove it manually with
+// `docker volume rm currencytracker-pgdata` to wipe local state.
+var postgres = builder.AddPostgres("postgres").WithDataVolume("currencytracker-pgdata");
+
+// Database "currencytracker" is what Phase 8's ApplicationDbContext binds
+// to via IConfiguration.GetConnectionString("currencytracker"). The
+// connection string is injected by Aspire as the environment variable
+// ConnectionStrings__currencytracker when Api or Worker calls
+// WithReference(currencytrackerDb) (lands in 7.5).
+var currencytrackerDb = postgres.AddDatabase("currencytracker");
+
+// Redis lands in 7.4.
 // Project references land in 7.5.
 
 builder.Build().Run();
