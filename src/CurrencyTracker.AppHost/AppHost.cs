@@ -27,6 +27,8 @@ var postgres = builder.AddPostgres("postgres").WithDataVolume("currencytracker-p
 var currencytrackerDb = postgres.AddDatabase("currencytracker");
 
 // Redis lands in 7.4.
+var cache = builder.AddRedis("cache").WithDataVolume("currencytracker-redisdata");
+
 // Project references land in 7.5.
 
 builder.Build().Run();
