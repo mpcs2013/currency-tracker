@@ -26,7 +26,11 @@ var postgres = builder.AddPostgres("postgres").WithDataVolume("currencytracker-p
 // WithReference(currencytrackerDb) (lands in 7.5).
 var currencytrackerDb = postgres.AddDatabase("currencytracker");
 
-// Redis lands in 7.4.
+// Redis cache with a named data volume. Phase 10's RedisCacheService
+// will resolve ConnectionStrings__cache from IConfiguration when Api
+// calls WithReference(cache) in 7.5.
+var cache = builder.AddRedis("cache").WithDataVolume("currencytracker-redisdata");
+
 // Project references land in 7.5.
 
 builder.Build().Run();
