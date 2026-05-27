@@ -31,6 +31,18 @@ var currencytrackerDb = postgres.AddDatabase("currencytracker");
 // calls WithReference(cache) in 7.5.
 var cache = builder.AddRedis("cache").WithDataVolume("currencytracker-redisdata");
 
-// Project references land in 7.5.
+builder
+    .AddProject<Projects.CurrencyTracker_Api>("api")
+    .WithReference(currencytrackerDb)
+    .WaitFor(currencytrackerDb)
+    .WithReference(cache)
+    .WaitFor(cache);
+
+builder
+    .AddProject<Projects.CurrencyTracker_Worker>("worker")
+    .WithReference(currencytrackerDb)
+    .WaitFor(currencytrackerDb)
+    .WithReference(cache)
+    .WaitFor(cache);
 
 builder.Build().Run();
