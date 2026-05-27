@@ -31,7 +31,19 @@ public sealed class AppHostAliveSmokeTests
         await using var app = await appHost.BuildAsync(ct);
         await app.StartAsync(ct);
 
-        using var httpClient = app.CreateHttpClient("api");
+        //using var httpClient = app.CreateHttpClient("api");
+
+        var handler = new HttpClientHandler
+        {
+            ServerCertificateCustomValidationCallback =
+                HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
+        };
+        var apiEndpoint = app.GetEndpoint("api", "https");
+        using var httpClient = new HttpClient(handler) { BaseAddress = apiEndpoint };
+        // Note: if CreateHttpClient doesn't accept a handler parameter,
+        // construct the client manually:
+        //   var endpoint = app.GetEndpoint("api", "https");
+        //   using var httpClient = new HttpClient(handler) { BaseAddress = endpoint };
 
         // Act — poll /alive for up to 90 seconds (image pulls on first run).
         var deadline = DateTime.UtcNow.AddSeconds(90);
