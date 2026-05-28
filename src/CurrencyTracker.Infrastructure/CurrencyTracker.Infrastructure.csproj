@@ -18,6 +18,10 @@
     </ItemGroup>
 
     <ItemGroup>
+        <InternalsVisibleTo Include="CurrencyTracker.Infrastructure.UnitTests" />
+        <InternalsVisibleTo Include="CurrencyTracker.Infrastructure.IntegrationTests" />
+    </ItemGroup>
+    <ItemGroup>
         <Folder Include="Persistence\Migrations\" />
     </ItemGroup>
 </Project>

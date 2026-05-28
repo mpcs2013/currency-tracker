@@ -1,13 +1,16 @@
 using CurrencyTracker.Application.Abstractions.Persistence;
 using CurrencyTracker.Domain.Currencies;
 using CurrencyTracker.Domain.Rates;
+using Microsoft.EntityFrameworkCore;
 
 namespace CurrencyTracker.Infrastructure.Persistence;
 
 /// <summary>
-/// EF Core adapter for <see cref="IExchangeRateRepository"/>. The full
-/// implementation lands in 8.6; this placeholder exists so 8.4 can
-/// wire the DI registrations and compile.
+/// EF Core adapter for <see cref="IExchangeRateRepository"/>.
+/// Loads <see cref="RateSnapshot"/> aggregates with their owned
+/// <see cref="ExchangeRate"/> collection eagerly via <c>Include</c>;
+/// upsert is implemented by removing any existing snapshot for the
+/// same <c>(Base, AsOf)</c> key and adding the supplied one.
 /// </summary>
 internal sealed class EfExchangeRateRepository : IExchangeRateRepository
 {
@@ -24,9 +27,26 @@ internal sealed class EfExchangeRateRepository : IExchangeRateRepository
         CurrencyCode baseCurrency,
         DateOnly asOf,
         CancellationToken cancellationToken
-    ) => throw new NotImplementedException("Implemented in 8.6.");
+    ) =>
+        _dbContext
+            .RateSnapshots.Include(s => s.Rates)
+            .FirstOrDefaultAsync(s => s.Base == baseCurrency && s.AsOf == asOf, cancellationToken);
 
     /// <inheritdoc />
-    public Task SaveSnapshotAsync(RateSnapshot snapshot, CancellationToken cancellationToken) =>
-        throw new NotImplementedException("Implemented in 8.6.");
+    public async Task SaveSnapshotAsync(RateSnapshot snapshot, CancellationToken cancellationToken)
+    {
+        var existing = await _dbContext
+            .RateSnapshots.Include(s => s.Rates)
+            .FirstOrDefaultAsync(
+                s => s.Base == snapshot.Base && s.AsOf == snapshot.AsOf,
+                cancellationToken
+            );
+
+        if (existing is not null)
+        {
+            _dbContext.RateSnapshots.Remove(existing);
+        }
+
+        await _dbContext.RateSnapshots.AddAsync(snapshot, cancellationToken);
+    }
 }
