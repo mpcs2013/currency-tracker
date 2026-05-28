@@ -1,6 +1,6 @@
+using CurrencyTracker.Api.IntegrationTests.Errors;
 using CurrencyTracker.Application.Messaging;
 using FluentValidation;
-using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
 using Wolverine;
 
@@ -8,16 +8,19 @@ namespace CurrencyTracker.Api.IntegrationTests.Messaging;
 
 /// <summary>
 /// Integration tests proving the Wolverine FluentValidation middleware
-/// fires before the handler. Uses <see cref="WebApplicationFactory{TEntryPoint}"/>
-/// to bootstrap the full Api host so the bus, the middleware, and the
-/// validator are all wired exactly as production runs them.
+/// fires before the handler. Uses <see cref="TestThrowsFactory"/> — the
+/// shared <c>WebApplicationFactory&lt;Program&gt;</c> subclass that
+/// supplies a placeholder <c>currencytracker</c> connection string so
+/// the Phase 8.4 <c>AddInfrastructure</c> call can build without a real
+/// Postgres. The bus, middleware, and validator are wired exactly as
+/// production runs them.
 /// </summary>
-public sealed class PingValidationTests : IClassFixture<WebApplicationFactory<Program>>
+public sealed class PingValidationTests : IClassFixture<TestThrowsFactory>
 {
-    private readonly WebApplicationFactory<Program> _factory;
+    private readonly TestThrowsFactory _factory;
 
     /// <summary>Class-fixture-injected web application factory.</summary>
-    public PingValidationTests(WebApplicationFactory<Program> factory)
+    public PingValidationTests(TestThrowsFactory factory)
     {
         _factory = factory;
     }
