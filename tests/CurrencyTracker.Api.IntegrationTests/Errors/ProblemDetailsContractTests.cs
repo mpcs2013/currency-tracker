@@ -103,7 +103,16 @@ public sealed class ProblemDetailsContractTests : IClassFixture<TestThrowsFactor
     {
         // Arrange
         var cancellationToken = TestContext.Current.CancellationToken;
-        using var productionFactory = new TestThrowsFactory("Production");
+
+        // Re-host the existing fixture with the Production environment.
+        // WithWebHostBuilder inherits the parent's ConfigureWebHost (so the
+        // test endpoints stay wired); the env-var injected by
+        // TestThrowsFactory's static constructor remains visible to
+        // Program.cs because the process env-var is set once for the whole
+        // test run.
+        using var productionFactory = _factory.WithWebHostBuilder(builder =>
+            builder.UseEnvironment("Production")
+        );
         var client = productionFactory.CreateClient();
 
         // Act
@@ -124,19 +133,36 @@ public sealed class ProblemDetailsContractTests : IClassFixture<TestThrowsFactor
 
 public sealed class TestThrowsFactory : WebApplicationFactory<Program>
 {
-    private readonly string _environment;
-
-    public TestThrowsFactory()
-        : this("Testing") { }
-
-    internal TestThrowsFactory(string environment)
+    // CRITICAL: this static constructor runs once, the first time any
+    // member of TestThrowsFactory is referenced — which is BEFORE
+    // WebApplicationFactory boots Program.cs. The env var lands in the
+    // process environment table, IConfiguration's default sources read
+    // it under ConnectionStrings:currencytracker (the "__" → ":" mapping
+    // is built into the .NET configuration provider), and Program.cs's
+    // AddInfrastructure() finds the value at its own line 14 — before
+    // ConfigureWebHost / ConfigureAppConfiguration would get a chance.
+    //
+    // This is the documented workaround for the minimal-API top-level-
+    // Program.cs fail-fast pattern: WebApplicationFactory can layer
+    // config ON TOP of Program.cs's, but cannot intercept what Program.cs
+    // reads from IConfiguration during its own top-level statements.
+    // Process env vars are visible to those statements.
+    //
+    // The value is junk — these tests never open a Postgres connection.
+    // The fail-fast in production code is unchanged and still protects
+    // real hosts started without a configured database.
+    static TestThrowsFactory()
     {
-        _environment = environment;
+        Environment.SetEnvironmentVariable(
+            "ConnectionStrings__currencytracker",
+            "Host=localhost;Database=ping-tests;Username=noop;Password=noop"
+        );
     }
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
-        builder.UseEnvironment(_environment);
+        builder.UseEnvironment("Testing");
+
         builder.Configure(app =>
         {
             app.UseRouting();
