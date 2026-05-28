@@ -37,14 +37,31 @@ public static class DependencyInjection
                     + "Are you running through the Aspire AppHost?"
             );
 
-        builder.Services.AddDbContext<Persistence.ApplicationDbContext>(options =>
-            options.UseNpgsql(connectionString)
+        builder.Services.AddDbContext<ApplicationDbContext>(options =>
+            options.UseNpgsql(connectionString).UseSnakeCaseNamingConvention()
         );
 
         builder.Services.AddScoped<ICurrencyRepository, Persistence.EfCurrencyRepository>();
         builder.Services.AddScoped<IExchangeRateRepository, Persistence.EfExchangeRateRepository>();
         builder.Services.AddScoped<IUnitOfWork, Persistence.EfUnitOfWork>();
 
+        return builder;
+    }
+
+    /// <summary>
+    /// Registers development-only hosted services — currently the
+    /// <see cref="Persistence.MigrationRunner"/>, which applies pending
+    /// migrations at startup. Call this from the host only when
+    /// <c>IHostEnvironment.IsDevelopment()</c> is true; production
+    /// migrations are applied by the deploy pipeline (Phase 14).
+    /// </summary>
+    /// <param name="builder">The host application builder.</param>
+    /// <returns>The same <paramref name="builder"/> for chaining.</returns>
+    public static IHostApplicationBuilder AddInfrastructureDevelopment(
+        this IHostApplicationBuilder builder
+    )
+    {
+        builder.Services.AddHostedService<Persistence.MigrationRunner>();
         return builder;
     }
 }

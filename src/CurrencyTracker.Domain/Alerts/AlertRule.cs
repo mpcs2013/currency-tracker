@@ -35,7 +35,7 @@ public sealed record AlertRule
     private AlertRule(
         Guid id,
         Guid ownerId,
-        CurrencyCode baseCurrency,
+        CurrencyCode @base,
         CurrencyCode quote,
         decimal thresholdPercent,
         AlertChannel channel,
@@ -44,7 +44,7 @@ public sealed record AlertRule
     {
         Id = id;
         OwnerId = ownerId;
-        Base = baseCurrency;
+        Base = @base;
         Quote = quote;
         ThresholdPercent = thresholdPercent;
         Channel = channel;
@@ -53,14 +53,14 @@ public sealed record AlertRule
 
     /// <summary>Creates a validated <see cref="AlertRule"/> with a new identity.</summary>
     /// <param name="ownerId">The owning user's identifier.</param>
-    /// <param name="baseCurrency">The base currency of the watched pair.</param>
+    /// <param name="base">The base currency of the watched pair.</param>
     /// <param name="quote">The quote currency of the watched pair.</param>
     /// <param name="thresholdPercent">The absolute percent threshold (e.g. 1.5 means ±1.5%).</param>
     /// <param name="channel">The delivery channel.</param>
     /// <returns>A success carrying the entity, or a validation failure.</returns>
     public static Result<AlertRule> Create(
         Guid ownerId,
-        CurrencyCode baseCurrency,
+        CurrencyCode @base,
         CurrencyCode quote,
         decimal thresholdPercent,
         AlertChannel channel
@@ -73,7 +73,7 @@ public sealed record AlertRule
             );
         }
 
-        if (baseCurrency == quote)
+        if (@base == quote)
         {
             return Result<AlertRule>.Failure(
                 DomainError.Validation(
@@ -107,7 +107,7 @@ public sealed record AlertRule
             new AlertRule(
                 Guid.NewGuid(),
                 ownerId,
-                baseCurrency,
+                @base,
                 quote,
                 thresholdPercent,
                 channel,

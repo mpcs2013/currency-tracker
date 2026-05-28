@@ -13,6 +13,11 @@ builder.AddServiceDefaults();
 
 builder.AddInfrastructure();
 
+if (builder.Environment.IsDevelopment())
+{
+    builder.AddInfrastructureDevelopment();
+}
+
 builder.UseWolverine(opts =>
 {
     opts.ApplicationAssembly = typeof(ApplicationAssemblyAnchor).Assembly;
