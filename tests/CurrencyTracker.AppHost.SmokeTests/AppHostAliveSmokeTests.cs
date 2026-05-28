@@ -36,7 +36,7 @@ public sealed class AppHostAliveSmokeTests
         var handler = new HttpClientHandler
         {
             ServerCertificateCustomValidationCallback =
-                HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
+                HttpClientHandler.DangerousAcceptAnyServerCertificateValidator,
         };
         var apiEndpoint = app.GetEndpoint("api", "https");
         using var httpClient = new HttpClient(handler) { BaseAddress = apiEndpoint };
