@@ -42,5 +42,6 @@
     <Project Path="tests/CurrencyTracker.Application.UnitTests/CurrencyTracker.Application.UnitTests.csproj" />
     <Project Path="tests/CurrencyTracker.Architecture.Tests/CurrencyTracker.Architecture.Tests.csproj" />
     <Project Path="tests/CurrencyTracker.Domain.UnitTests/CurrencyTracker.Domain.UnitTests.csproj" />
+    <Project Path="tests/CurrencyTracker.Infrastructure.UnitTests/CurrencyTracker.Infrastructure.UnitTests.csproj" />
   </Folder>
 </Solution>

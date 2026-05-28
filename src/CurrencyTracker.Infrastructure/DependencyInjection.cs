@@ -62,6 +62,7 @@ public static class DependencyInjection
     )
     {
         builder.Services.AddHostedService<Persistence.MigrationRunner>();
+        builder.Services.AddHostedService<Persistence.CurrencySeeder>();
         return builder;
     }
 }
