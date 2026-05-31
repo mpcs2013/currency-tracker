@@ -7,8 +7,9 @@ namespace CurrencyTracker.Infrastructure.Persistence;
 /// <summary>
 /// EF Core adapter for <see cref="ICurrencyRepository"/>. Reads the
 /// catalogue from <c>ApplicationDbContext.Currencies</c>; uses
-/// &lt;see cref="DbSet{TEntity}.FindAsync"/&gt; for primary-key lookups so
-/// the change tracker is consulted before the database.
+/// <see cref="DbSet{TEntity}.FindAsync(object[], System.Threading.CancellationToken)"/>
+/// for primary-key lookups so the change tracker is consulted before
+/// the database.
 /// </summary>
 internal sealed class EfCurrencyRepository : ICurrencyRepository
 {
