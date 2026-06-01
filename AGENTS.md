@@ -349,6 +349,11 @@ Every PR runs locally and in CI:
   the injected value automatically. A connection string in
   `appsettings.json` would shadow the Aspire-injected one and break the
   local-vs-Azure parity story Phase 14's Key Vault flow depends on.
+- Integration tests in `tests/CurrencyTracker.Infrastructure.IntegrationTests/`
+  require Docker and run on the Linux CI leg only. Locally, they run
+  on Windows / Mac when Docker Desktop is up; on GitHub Actions
+  they're Linux-only because the `windows-latest` runner doesn't
+  support Linux containers in the way Testcontainers needs.
 
 ## How to update this file
 
