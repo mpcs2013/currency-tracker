@@ -57,3 +57,10 @@ Phase 8 uses:
   step). The cost — schema drift between Container App revisions during a rolling deployment, the
   Api refusing to start if the migration fails, lock contention if two replicas race — is worse.
   Phase 14's deploy pipeline applies migrations once, before the new revision goes live.
+
+## Verified
+
+- **2026-06-01 — Observability**: confirmed Npgsql spans appear in the Aspire
+  dashboard for migration, seed, and `GET /ping` traces. Parameters
+  redacted as `$N` placeholders; no sensitive-data-logging concerns.
+  Verified by issue 8.11.
