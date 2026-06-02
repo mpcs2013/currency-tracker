@@ -7,7 +7,7 @@ namespace CurrencyTracker.Infrastructure.Providers;
 /// exactly: a base currency, an observation date, and a map of quote
 /// currency code to rate. Deliberately <c>internal</c> so the external
 /// API's shape never crosses the anti-corruption boundary into
-/// Application — the &lt;see cref="FrankfurterExchangeRateProvider"/&gt;
+/// Application — the <see cref="FrankfurterExchangeRateProvider"/>;
 /// adapter (issue 9.4) is the only consumer, and it translates this
 /// into the domain <c>RateSnapshot</c>.
 /// </summary>
