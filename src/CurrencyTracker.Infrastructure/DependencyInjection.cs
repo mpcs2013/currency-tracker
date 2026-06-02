@@ -5,6 +5,9 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Http.Resilience;
+using Microsoft.Extensions.Options;
+using Polly;
 
 namespace CurrencyTracker.Infrastructure;
 
@@ -52,6 +55,45 @@ public static class DependencyInjection
             )
             .Validate(o => o.Timeout > TimeSpan.Zero, "Frankfurter:Timeout must be positive.")
             .ValidateOnStart();
+
+        builder
+            .Services.AddHttpClient<FrankfurterClient>(
+                (sp, client) =>
+                {
+                    var opts = sp.GetRequiredService<IOptions<FrankfurterOptions>>().Value;
+                    client.BaseAddress = opts.BaseUrl;
+                    client.Timeout = opts.Timeout;
+                    client.DefaultRequestHeaders.UserAgent.ParseAdd(opts.UserAgent);
+                    client.MaxResponseContentBufferSize = 256 * 1024;
+                }
+            )
+            .AddResilienceHandler(
+                "frankfurter",
+                static pipeline =>
+                {
+                    pipeline.AddRetry(
+                        new HttpRetryStrategyOptions
+                        {
+                            MaxRetryAttempts = 3,
+                            BackoffType = DelayBackoffType.Exponential,
+                            UseJitter = true,
+                            Delay = TimeSpan.FromMilliseconds(500),
+                        }
+                    );
+                    pipeline.AddCircuitBreaker(
+                        new HttpCircuitBreakerStrategyOptions
+                        {
+                            FailureRatio = 0.5,
+                            MinimumThroughput = 10,
+                            SamplingDuration = TimeSpan.FromSeconds(30),
+                            BreakDuration = TimeSpan.FromSeconds(15),
+                        }
+                    );
+                    pipeline.AddTimeout(
+                        new HttpTimeoutStrategyOptions { Timeout = TimeSpan.FromSeconds(3) }
+                    );
+                }
+            );
 
         builder.Services.AddScoped<ICurrencyRepository, Persistence.EfCurrencyRepository>();
         builder.Services.AddScoped<IExchangeRateRepository, Persistence.EfExchangeRateRepository>();
