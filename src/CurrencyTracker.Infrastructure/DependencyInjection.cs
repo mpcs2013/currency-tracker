@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Options;
 
 namespace CurrencyTracker.Infrastructure;
 
@@ -52,6 +53,17 @@ public static class DependencyInjection
             )
             .Validate(o => o.Timeout > TimeSpan.Zero, "Frankfurter:Timeout must be positive.")
             .ValidateOnStart();
+
+        builder.Services.AddHttpClient<FrankfurterClient>(
+            (sp, client) =>
+            {
+                var opts = sp.GetRequiredService<IOptions<FrankfurterOptions>>().Value;
+                client.BaseAddress = opts.BaseUrl;
+                client.Timeout = opts.Timeout;
+                client.DefaultRequestHeaders.UserAgent.ParseAdd(opts.UserAgent);
+                client.MaxResponseContentBufferSize = 256 * 1024;
+            }
+        );
 
         builder.Services.AddScoped<ICurrencyRepository, Persistence.EfCurrencyRepository>();
         builder.Services.AddScoped<IExchangeRateRepository, Persistence.EfExchangeRateRepository>();
