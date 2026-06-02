@@ -1,5 +1,6 @@
 using CurrencyTracker.Application.Abstractions.Persistence;
 using CurrencyTracker.Infrastructure.Persistence;
+using CurrencyTracker.Infrastructure.Providers;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -40,6 +41,17 @@ public static class DependencyInjection
         builder.Services.AddDbContext<ApplicationDbContext>(options =>
             options.UseNpgsql(connectionString).UseSnakeCaseNamingConvention()
         );
+
+        builder
+            .Services.AddOptions<FrankfurterOptions>()
+            .Bind(builder.Configuration.GetSection(FrankfurterOptions.SectionName))
+            .ValidateDataAnnotations()
+            .Validate(
+                o => o.BaseUrl is { IsAbsoluteUri: true, Scheme: "https" },
+                "Frankfurter:BaseUrl must be an absolute https URI."
+            )
+            .Validate(o => o.Timeout > TimeSpan.Zero, "Frankfurter:Timeout must be positive.")
+            .ValidateOnStart();
 
         builder.Services.AddScoped<ICurrencyRepository, Persistence.EfCurrencyRepository>();
         builder.Services.AddScoped<IExchangeRateRepository, Persistence.EfExchangeRateRepository>();
