@@ -10,7 +10,7 @@ namespace CurrencyTracker.Infrastructure.Providers;
 /// arrives pre-configured with the base address, timeout, and
 /// <c>User-Agent</c> from <see cref="FrankfurterOptions"/>. This class
 /// only performs the HTTP call and deserialisation; it does not map to
-/// domain types (that is the &lt;see cref="FrankfurterExchangeRateProvider"/&gt;
+/// domain types (that is the <see cref="FrankfurterExchangeRateProvider"/>
 /// adapter's job) and it does not translate exceptions (the adapter does
 /// that too).
 /// </summary>
