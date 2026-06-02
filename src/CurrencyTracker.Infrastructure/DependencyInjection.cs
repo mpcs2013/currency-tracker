@@ -77,19 +77,20 @@ public static class DependencyInjection
                             MaxRetryAttempts = 3,
                             BackoffType = DelayBackoffType.Exponential,
                             UseJitter = true,
+                            Delay = TimeSpan.FromMilliseconds(500),
                         }
                     );
                     pipeline.AddCircuitBreaker(
                         new HttpCircuitBreakerStrategyOptions
                         {
                             FailureRatio = 0.5,
-                            MinimumThroughput = 5,
+                            MinimumThroughput = 10,
                             SamplingDuration = TimeSpan.FromSeconds(30),
                             BreakDuration = TimeSpan.FromSeconds(15),
                         }
                     );
                     pipeline.AddTimeout(
-                        new HttpTimeoutStrategyOptions { Timeout = TimeSpan.FromSeconds(5) }
+                        new HttpTimeoutStrategyOptions { Timeout = TimeSpan.FromSeconds(3) }
                     );
                 }
             );
