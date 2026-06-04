@@ -21,16 +21,19 @@ public sealed class IngestDailyRatesCommandValidator : AbstractValidator<IngestD
     /// </summary>
     public IngestDailyRatesCommandValidator(IDateTimeProvider clock)
     {
+        var today = DateOnly.FromDateTime(clock.UtcNow.UtcDateTime);
+
         RuleFor(x => x.BaseCurrency)
             .Cascade(CascadeMode.Stop)
             .NotEmpty()
+            .WithMessage("BaseCurrency is required.")
             .Must(raw => CurrencyCode.Create(raw).IsSuccess)
-            .WithMessage("BaseCurrency must be a known currency code.");
+            .WithMessage("BaseCurrency must be a known currency ISO 4217 code.");
 
         RuleFor(x => x.AsOf)
-            .NotEqual(default(DateOnly))
-            .WithMessage("AsOf is required.")
-            .Must((_, asOf) => asOf <= DateOnly.FromDateTime(clock.UtcNow.UtcDateTime))
-            .WithMessage("AsOf cannot be in the future.");
+            .Must(asOf => asOf != default)
+            .WithMessage("AsOf date is required.")
+            .Must(asOf => asOf <= today)
+            .WithMessage("AsOf date cannot be in the future.");
     }
 }

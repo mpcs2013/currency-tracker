@@ -6,13 +6,13 @@ namespace CurrencyTracker.Application.UnitTests.Messaging;
 
 public sealed class IngestDailyRatesCommandValidatorTests
 {
-    private static readonly DateTimeOffset FixedNow = new(2026, 06, 04, 12, 00, 00, TimeSpan.Zero);
+    private static readonly DateOnly Today = new(2026, 05, 28);
 
     [Fact]
-    public void Valid_command_passes_validation()
+    public void Valid_command_passes()
     {
         var validator = CreateValidator();
-        var command = new IngestDailyRatesCommand("USD", new DateOnly(2026, 06, 04));
+        var command = new IngestDailyRatesCommand("USD", Today);
 
         var result = validator.TestValidate(command);
 
@@ -20,10 +20,10 @@ public sealed class IngestDailyRatesCommandValidatorTests
     }
 
     [Fact]
-    public void Empty_base_currency_fails_validation()
+    public void Empty_base_currency_fails()
     {
         var validator = CreateValidator();
-        var command = new IngestDailyRatesCommand(string.Empty, new DateOnly(2026, 06, 04));
+        var command = new IngestDailyRatesCommand(string.Empty, Today);
 
         var result = validator.TestValidate(command);
 
@@ -31,10 +31,10 @@ public sealed class IngestDailyRatesCommandValidatorTests
     }
 
     [Fact]
-    public void Unknown_base_currency_fails_validation()
+    public void Unknown_base_currency_fails()
     {
         var validator = CreateValidator();
-        var command = new IngestDailyRatesCommand("ZZZ", new DateOnly(2026, 06, 04));
+        var command = new IngestDailyRatesCommand("ZZZ", Today);
 
         var result = validator.TestValidate(command);
 
@@ -42,7 +42,7 @@ public sealed class IngestDailyRatesCommandValidatorTests
     }
 
     [Fact]
-    public void Default_as_of_fails_validation()
+    public void Default_as_of_fails()
     {
         var validator = CreateValidator();
         var command = new IngestDailyRatesCommand("USD", default);
@@ -53,10 +53,10 @@ public sealed class IngestDailyRatesCommandValidatorTests
     }
 
     [Fact]
-    public void Future_as_of_fails_validation()
+    public void Future_as_of_fails()
     {
         var validator = CreateValidator();
-        var command = new IngestDailyRatesCommand("USD", new DateOnly(2026, 06, 05));
+        var command = new IngestDailyRatesCommand("USD", Today.AddDays(1));
 
         var result = validator.TestValidate(command);
 
@@ -64,5 +64,5 @@ public sealed class IngestDailyRatesCommandValidatorTests
     }
 
     private static IngestDailyRatesCommandValidator CreateValidator() =>
-        new(new FixedDateTimeProvider(FixedNow));
+        new(new FixedDateTimeProvider(new DateTimeOffset(Today, TimeOnly.MinValue, TimeSpan.Zero)));
 }
