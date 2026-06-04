@@ -1,7 +1,9 @@
 using CurrencyTracker.Application.Abstractions.Persistence;
 using CurrencyTracker.Application.Abstractions.Providers;
+using CurrencyTracker.Application.Abstractions.Time;
 using CurrencyTracker.Infrastructure.Persistence;
 using CurrencyTracker.Infrastructure.Providers;
+using CurrencyTracker.Infrastructure.Time;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -96,6 +98,7 @@ public static class DependencyInjection
                 }
             );
 
+        builder.Services.AddSingleton<IDateTimeProvider, SystemDateTimeProvider>();
         builder.Services.AddScoped<IExchangeRateProvider, FrankfurterExchangeRateProvider>();
         builder.Services.AddScoped<ICurrencyRepository, Persistence.EfCurrencyRepository>();
         builder.Services.AddScoped<IExchangeRateRepository, Persistence.EfExchangeRateRepository>();
