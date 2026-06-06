@@ -7,7 +7,7 @@ namespace CurrencyTracker.Application.UnitTests.Fakes;
 /// <see cref="SaveChangesAsync"/> was called. Tests assert on
 /// <see cref="SaveCount"/> to confirm a handler did (or didn't) commit.
 /// </summary>
-public sealed class RecordingUnitOfWork : IUnitOfWork
+public sealed class InMemoryUnitOfWork : IUnitOfWork
 {
     /// <summary>The number of times <see cref="SaveChangesAsync"/> has been called.</summary>
     public int SaveCount { get; private set; }

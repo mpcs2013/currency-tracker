@@ -65,7 +65,7 @@ public sealed class RepositoryFakesTests
     [Fact]
     public async Task RecordingUnitOfWork_SaveChangesAsync_increments_SaveCount()
     {
-        var sut = new RecordingUnitOfWork();
+        var sut = new InMemoryUnitOfWork();
 
         await sut.SaveChangesAsync(NoCt);
         await sut.SaveChangesAsync(NoCt);
@@ -76,7 +76,7 @@ public sealed class RepositoryFakesTests
     [Fact]
     public async Task RecordingUnitOfWork_SaveChangesAsync_honours_cancellation_token()
     {
-        var sut = new RecordingUnitOfWork();
+        var sut = new InMemoryUnitOfWork();
         using var cts = new CancellationTokenSource();
         cts.Cancel();
 
