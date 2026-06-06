@@ -1,6 +1,8 @@
 using System.Diagnostics;
 using CurrencyTracker.Api.ErrorHandling;
 using CurrencyTracker.Application;
+using CurrencyTracker.Application.Abstractions.Persistence;
+using CurrencyTracker.Application.Abstractions.Providers;
 using CurrencyTracker.Infrastructure;
 using CurrencyTracker.ServiceDefaults;
 using Wolverine;
@@ -22,6 +24,16 @@ builder.UseWolverine(opts =>
 {
     opts.ApplicationAssembly = typeof(ApplicationAssemblyAnchor).Assembly;
     opts.UseFluentValidation();
+
+    // The ingestion handler depends on internal adapters (the Frankfurter
+    // provider and the EF repositories / unit-of-work). Wolverine 6 can't
+    // inline-construct internal types, and ServiceLocationPolicy.NotAllowed
+    // (the 6.0 default) forbids the service-locator fallback. Opt these
+    // specific ports into service location so the adapters stay internal
+    // sealed, per the cross-layer guardrails.
+    opts.CodeGeneration.AlwaysUseServiceLocationFor<IExchangeRateProvider>();
+    opts.CodeGeneration.AlwaysUseServiceLocationFor<IExchangeRateRepository>();
+    opts.CodeGeneration.AlwaysUseServiceLocationFor<IUnitOfWork>();
 });
 
 builder.Services.AddOpenApi();
