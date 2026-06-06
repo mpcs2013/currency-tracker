@@ -12,25 +12,25 @@ public sealed class IngestDailyRatesHandlerTests
     private static readonly CancellationToken NoCt = CancellationToken.None;
     private static readonly CurrencyCode Usd = CurrencyCode.Create("USD").Value;
     private static readonly CurrencyCode Eur = CurrencyCode.Create("EUR").Value;
+    private static readonly DateOnly AsOf = new DateOnly(2026, 5, 28);
 
     [Fact]
     public async Task Handle_persists_snapshot_and_returns_event_on_success()
     {
         var provider = new InMemoryExchangeRateProvider();
         var repository = new InMemoryExchangeRateRepository();
-        var uow = new RecordingUnitOfWork();
-        var asOf = new DateOnly(2026, 5, 28);
+        var uow = new InMemoryUnitOfWork();
         var snapshot = RateSnapshot
-            .Create(Usd, asOf, [ExchangeRate.Create(Usd, Eur, 0.92m, asOf).Value])
+            .Create(Usd, AsOf, [ExchangeRate.Create(Usd, Eur, 0.92m, AsOf).Value])
             .Value;
-        provider.Seed(Usd, asOf, snapshot);
-        var command = new IngestDailyRatesCommand("USD", asOf);
+        provider.Seed(Usd, AsOf, snapshot);
+        var command = new IngestDailyRatesCommand("USD", AsOf);
 
         var @event = await IngestDailyRatesHandler.Handle(command, provider, repository, uow, NoCt);
-        var persisted = await repository.GetSnapshotAsync(Usd, asOf, NoCt);
+        var persisted = await repository.GetSnapshotAsync(Usd, AsOf, NoCt);
 
         @event.Base.Should().Be(Usd);
-        @event.AsOf.Should().Be(asOf);
+        @event.AsOf.Should().Be(AsOf);
         @event.RateCount.Should().Be(1);
         persisted.Should().NotBeNull().And.BeSameAs(snapshot);
         uow.SaveCount.Should().Be(1);
@@ -41,15 +41,14 @@ public sealed class IngestDailyRatesHandlerTests
     {
         var provider = new InMemoryExchangeRateProvider
         {
-            FailWith = new DomainError("PROVIDER_DOWN", "down"),
+            FailWith = new DomainError("PROVIDER_UNAVAILABLE", "down"),
         };
         var repository = new InMemoryExchangeRateRepository();
-        var uow = new RecordingUnitOfWork();
-        var asOf = new DateOnly(2026, 5, 28);
-        var command = new IngestDailyRatesCommand("USD", asOf);
+        var uow = new InMemoryUnitOfWork();
+        var command = new IngestDailyRatesCommand("USD", AsOf);
 
         var act = () => IngestDailyRatesHandler.Handle(command, provider, repository, uow, NoCt);
-        var persisted = await repository.GetSnapshotAsync(Usd, asOf, NoCt);
+        var persisted = await repository.GetSnapshotAsync(Usd, AsOf, NoCt);
 
         await act.Should().ThrowAsync<DomainException>();
         persisted.Should().BeNull();
