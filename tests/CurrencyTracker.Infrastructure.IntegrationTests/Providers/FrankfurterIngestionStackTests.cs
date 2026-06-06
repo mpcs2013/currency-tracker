@@ -31,7 +31,7 @@ public sealed class FrankfurterIngestionStackTests : IClassFixture<PostgresFixtu
 
     public ValueTask InitializeAsync()
     {
-        _wireMock = WireMockServer.Start();                       // plain HTTP — reliable
+        _wireMock = WireMockServer.Start(); // plain HTTP — reliable
         _services = IngestionStackHarness.Build(_postgres.ConnectionString, _wireMock.Url!);
         return ValueTask.CompletedTask;
     }

@@ -3,6 +3,7 @@ using CurrencyTracker.Api.ErrorHandling;
 using CurrencyTracker.Application;
 using CurrencyTracker.Application.Abstractions.Persistence;
 using CurrencyTracker.Application.Abstractions.Providers;
+using CurrencyTracker.Application.Messaging;
 using CurrencyTracker.Infrastructure;
 using CurrencyTracker.ServiceDefaults;
 using Wolverine;
@@ -12,6 +13,14 @@ using Wolverine.Http;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.AddServiceDefaults();
+
+// ServiceDefaults wires the generic OTel instrumentation but can't see the
+// app's telemetry scope. Register the ingestion meter + source here so the
+// rates.ingested counter and the ingest.daily_rates span are exported.
+builder
+    .Services.AddOpenTelemetry()
+    .WithMetrics(metrics => metrics.AddMeter(IngestionTelemetry.SourceName))
+    .WithTracing(tracing => tracing.AddSource(IngestionTelemetry.SourceName));
 
 builder.AddInfrastructure();
 
@@ -23,6 +32,7 @@ if (builder.Environment.IsDevelopment())
 builder.UseWolverine(opts =>
 {
     opts.ApplicationAssembly = typeof(ApplicationAssemblyAnchor).Assembly;
+    opts.Discovery.IncludeAssembly(typeof(Program).Assembly); // scan the Api for [Wolverine*] endpoints
     opts.UseFluentValidation();
 
     // The ingestion handler depends on internal adapters (the Frankfurter

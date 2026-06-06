@@ -51,6 +51,10 @@ public static class IngestDailyRatesHandler
         CancellationToken cancellationToken
     )
     {
+        using var activity = IngestionTelemetry.ActivitySource.StartActivity("ingest.daily_rates");
+        activity?.SetTag("ingest.base", command.BaseCurrency);
+        activity?.SetTag("ingest.as_of", command.AsOf.ToString("yyyy-MM-dd"));
+
         // Validated by the FluentValidation middleware — parse is safe.
         var baseCurrency = CurrencyCode.Create(command.BaseCurrency).Value;
 
@@ -68,6 +72,8 @@ public static class IngestDailyRatesHandler
 
         await repository.SaveSnapshotAsync(snapshot.Value, cancellationToken);
         await unitOfWork.SaveChangesAsync(cancellationToken);
+
+        IngestionTelemetry.RatesIngested.Add(snapshot.Value.Rates.Count);
 
         return new DailyRatesIngested(baseCurrency, command.AsOf, snapshot.Value.Rates.Count);
     }
