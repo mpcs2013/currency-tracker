@@ -1,5 +1,6 @@
 <Solution>
   <Folder Name="/docs/">
+    <File Path="docs/caching.md" />
     <File Path="docs/domain.md" />
     <File Path="docs/errors.md" />
     <File Path="docs/ports.md" />
@@ -28,11 +29,17 @@
   </Folder>
   <Folder Name="/src/">
     <Project Path="src/CurrencyTracker.Api/CurrencyTracker.Api.csproj" />
-    <Project Path="src/CurrencyTracker.AppHost/CurrencyTracker.AppHost.csproj" Id="7ac89763-1cfd-4c25-be64-fbde3c9121d2" />
+    <Project
+      Path="src/CurrencyTracker.AppHost/CurrencyTracker.AppHost.csproj"
+      Id="7ac89763-1cfd-4c25-be64-fbde3c9121d2"
+    />
     <Project Path="src/CurrencyTracker.Application/CurrencyTracker.Application.csproj" />
     <Project Path="src/CurrencyTracker.Domain/CurrencyTracker.Domain.csproj" />
     <Project Path="src/CurrencyTracker.Infrastructure/CurrencyTracker.Infrastructure.csproj" />
-    <Project Path="src/CurrencyTracker.ServiceDefaults/CurrencyTracker.ServiceDefaults.csproj" Id="a3444b57-38aa-4a40-b034-cee02957ea96" />
+    <Project
+      Path="src/CurrencyTracker.ServiceDefaults/CurrencyTracker.ServiceDefaults.csproj"
+      Id="a3444b57-38aa-4a40-b034-cee02957ea96"
+    />
     <Project Path="src/CurrencyTracker.Worker/CurrencyTracker.Worker.csproj" />
   </Folder>
   <Folder Name="/tests/">

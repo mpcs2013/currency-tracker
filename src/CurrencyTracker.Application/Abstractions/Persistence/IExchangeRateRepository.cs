@@ -26,6 +26,19 @@ public interface IExchangeRateRepository
     );
 
     /// <summary>
+    /// Retrieves the most recent snapshot for <paramref name="baseCurrency"/>
+    /// — the one with the greatest <c>AsOf</c> — with its owned rates loaded,
+    /// or <see langword="null"/> if no snapshot exists for that base.
+    /// </summary>
+    /// <param name="baseCurrency">The base currency of the snapshot.</param>
+    /// <param name="cancellationToken">Token to cancel the underlying I/O.</param>
+    /// <returns>The latest snapshot, or <see langword="null"/>.</returns>
+    Task<RateSnapshot?> GetLatestSnapshotAsync(
+        CurrencyCode baseCurrency,
+        CancellationToken cancellationToken
+    );
+
+    /// <summary>
     /// Tracks <paramref name="snapshot"/> for upsert on the next
     /// <see cref="IUnitOfWork.SaveChangesAsync"/> call. If a snapshot
     /// for the same <c>(Base, AsOf)</c> already exists, the Phase 8
