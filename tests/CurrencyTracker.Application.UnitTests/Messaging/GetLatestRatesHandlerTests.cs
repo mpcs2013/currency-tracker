@@ -28,7 +28,7 @@ public sealed class GetLatestRatesHandlerTests
         var repo = new InMemoryExchangeRateRepository();
         await repo.SaveSnapshotAsync(SampleSnapshot(), TestContext.Current.CancellationToken);
         var cache = new InMemoryCacheService();
-        var sut = new GetLatestRatesHandler(repo, cache);
+        var sut = new GetLatestRatesHandler(repo, cache, new GetLatestRatesQueryValidator());
 
         // Act
         var result = await sut.Handle(
@@ -53,7 +53,7 @@ public sealed class GetLatestRatesHandlerTests
         var repo = new InMemoryExchangeRateRepository();
         await repo.SaveSnapshotAsync(SampleSnapshot(), TestContext.Current.CancellationToken);
         var cache = new InMemoryCacheService();
-        var sut = new GetLatestRatesHandler(repo, cache);
+        var sut = new GetLatestRatesHandler(repo, cache, new GetLatestRatesQueryValidator());
         await sut.Handle(new GetLatestRatesQuery("USD"), TestContext.Current.CancellationToken);
         repo.LatestReads.Should().Be(1);
 
@@ -70,7 +70,7 @@ public sealed class GetLatestRatesHandlerTests
         // Arrange
         var repo = new InMemoryExchangeRateRepository(); // empty
         var cache = new InMemoryCacheService();
-        var sut = new GetLatestRatesHandler(repo, cache);
+        var sut = new GetLatestRatesHandler(repo, cache, new GetLatestRatesQueryValidator());
 
         // Act
         var act = () =>
