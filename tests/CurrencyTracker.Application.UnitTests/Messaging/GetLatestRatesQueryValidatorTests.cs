@@ -9,14 +9,14 @@ namespace CurrencyTracker.Application.UnitTests.Messaging;
 public sealed class GetLatestRatesQueryValidatorTests
 {
     [Fact]
-    public void Uppercase_three_letter_base_currency_passes_validation()
+    public void Valid_Uppercase_three_letter_base_currency_passes()
     {
         var validator = new GetLatestRatesQueryValidator();
         var query = new GetLatestRatesQuery("USD");
 
         var result = validator.TestValidate(query);
 
-        result.ShouldNotHaveValidationErrorFor(x => x.BaseCurrency);
+        result.ShouldNotHaveValidationErrorFor(x => x.Base);
     }
 
     [Theory]
@@ -25,13 +25,13 @@ public sealed class GetLatestRatesQueryValidatorTests
     [InlineData("US")]
     [InlineData("USDD")]
     [InlineData("U$D")]
-    public void Invalid_base_currency_formats_fail_validation(string baseCurrency)
+    public void Invalid_base_currency_fail(string code)
     {
         var validator = new GetLatestRatesQueryValidator();
-        var query = new GetLatestRatesQuery(baseCurrency);
+        var query = new GetLatestRatesQuery(code);
 
         var result = validator.TestValidate(query);
 
-        result.ShouldHaveValidationErrorFor(x => x.BaseCurrency);
+        result.ShouldHaveValidationErrorFor(x => x.Base);
     }
 }
