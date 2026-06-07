@@ -22,6 +22,16 @@ internal sealed class EfExchangeRateRepository : IExchangeRateRepository
     /// <param name="dbContext">The shared <see cref="ApplicationDbContext"/>.</param>
     public EfExchangeRateRepository(ApplicationDbContext dbContext) => _dbContext = dbContext;
 
+    public Task<RateSnapshot?> GetLatestSnapshotAsync(
+        CurrencyCode baseCurrency,
+        CancellationToken cancellationToken
+    ) =>
+        _dbContext
+            .RateSnapshots.Include(s => s.Rates)
+            .Where(s => s.Base == baseCurrency)
+            .OrderByDescending(s => s.AsOf)
+            .FirstOrDefaultAsync(cancellationToken);
+
     /// <inheritdoc />
     public Task<RateSnapshot?> GetSnapshotAsync(
         CurrencyCode baseCurrency,

@@ -13,6 +13,9 @@ public sealed class InMemoryExchangeRateRepository : IExchangeRateRepository
 {
     private readonly Dictionary<(CurrencyCode, DateOnly), RateSnapshot> _store = new();
 
+    /// <summary>Times GetLatestSnapshotAsync was called — a test hook for the cache-hit assertion.</summary>
+    public int LatestReads { get; private set; }
+
     /// <inheritdoc />
     public Task<RateSnapshot?> GetSnapshotAsync(
         CurrencyCode baseCurrency,
@@ -24,6 +27,22 @@ public sealed class InMemoryExchangeRateRepository : IExchangeRateRepository
         return Task.FromResult(
             _store.TryGetValue((baseCurrency, asOf), out var snap) ? snap : null
         );
+    }
+
+    /// <inheritdoc />
+    public Task<RateSnapshot?> GetLatestSnapshotAsync(
+        CurrencyCode baseCurrency,
+        CancellationToken cancellationToken
+    )
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        LatestReads++;
+        var latest = _store
+            .Where(kvp => kvp.Key.Item1.Equals(baseCurrency))
+            .OrderByDescending(kvp => kvp.Key.Item2)
+            .Select(kvp => kvp.Value)
+            .FirstOrDefault();
+        return Task.FromResult<RateSnapshot?>(latest);
     }
 
     /// <inheritdoc />

@@ -20,4 +20,8 @@
         <ProjectReference Include="..\CurrencyTracker.Domain\CurrencyTracker.Domain.csproj" />
         <ProjectReference Include="..\CurrencyTracker.ServiceDefaults\CurrencyTracker.ServiceDefaults.csproj" />
     </ItemGroup>
+
+    <ItemGroup>
+        <Folder Include="Exceptions\" />
+    </ItemGroup>
 </Project>
