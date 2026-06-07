@@ -52,11 +52,11 @@ public static class IngestDailyRatesHandler
     )
     {
         using var activity = IngestionTelemetry.ActivitySource.StartActivity("ingest.daily_rates");
-        activity?.SetTag("ingest.base", command.BaseCurrency);
+        activity?.SetTag("ingest.base", command.Base);
         activity?.SetTag("ingest.as_of", command.AsOf.ToString("yyyy-MM-dd"));
 
         // Validated by the FluentValidation middleware — parse is safe.
-        var baseCurrency = CurrencyCode.Create(command.BaseCurrency).Value;
+        var baseCurrency = CurrencyCode.Create(command.Base).Value;
 
         var snapshot = await provider.FetchAsync(baseCurrency, command.AsOf, cancellationToken);
 
@@ -65,7 +65,7 @@ public static class IngestDailyRatesHandler
             // No try/catch building an HTTP response — throw and let the
             // IExceptionHandler pipeline translate it to ProblemDetails.
             throw new DomainException(
-                $"Ingestion failed for {command.BaseCurrency} on {command.AsOf:yyyy-MM-dd}: "
+                $"Ingestion failed for {command.Base} on {command.AsOf:yyyy-MM-dd}: "
                     + $"{snapshot.Error.Code}."
             );
         }

@@ -26,7 +26,7 @@ public sealed class AdminIngestEndpointTests : IClassFixture<TestThrowsFactory>
         // Arrange
         using var scope = _factory.Services.CreateScope();
         var bus = scope.ServiceProvider.GetRequiredService<IMessageBus>();
-        var command = new IngestDailyRatesCommand(BaseCurrency: "", AsOf: default);
+        var command = new IngestDailyRatesCommand(Base: "", AsOf: default);
 
         // Act
         Func<Task> act = async () => await bus.InvokeAsync(command);

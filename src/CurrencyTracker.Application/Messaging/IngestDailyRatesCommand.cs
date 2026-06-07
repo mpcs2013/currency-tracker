@@ -7,9 +7,9 @@ namespace CurrencyTracker.Application.Messaging;
 /// <summary>
 /// Message describing which daily rates snapshot should be ingested.
 /// </summary>
-/// <param name="BaseCurrency">ISO 4217 base currency code.</param>
+/// <param name="Base">ISO 4217 base currency code.</param>
 /// <param name="AsOf">The business date for the snapshot.</param>
-public sealed record IngestDailyRatesCommand(string BaseCurrency, DateOnly AsOf);
+public sealed record IngestDailyRatesCommand(string Base, DateOnly AsOf);
 
 /// <summary>
 /// Validator for <see cref="IngestDailyRatesCommand"/>.
@@ -23,12 +23,12 @@ public sealed class IngestDailyRatesCommandValidator : AbstractValidator<IngestD
     {
         var today = DateOnly.FromDateTime(clock.UtcNow.UtcDateTime);
 
-        RuleFor(x => x.BaseCurrency)
+        RuleFor(x => x.Base)
             .Cascade(CascadeMode.Stop)
             .NotEmpty()
-            .WithMessage("BaseCurrency is required.")
+            .WithMessage("Base is required.")
             .Must(raw => CurrencyCode.Create(raw).IsSuccess)
-            .WithMessage("BaseCurrency must be a known currency ISO 4217 code.");
+            .WithMessage("Base must be a known currency ISO 4217 code.");
 
         RuleFor(x => x.AsOf)
             .Must(asOf => asOf != default)
