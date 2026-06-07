@@ -1,3 +1,4 @@
+using CurrencyTracker.Application.Caching;
 using CurrencyTracker.Application.Messaging;
 using CurrencyTracker.Application.UnitTests.Fakes;
 using CurrencyTracker.Domain.Common;
@@ -13,45 +14,79 @@ public sealed class IngestDailyRatesHandlerTests
     private static readonly CurrencyCode Usd = CurrencyCode.Create("USD").Value;
     private static readonly CurrencyCode Eur = CurrencyCode.Create("EUR").Value;
     private static readonly DateOnly AsOf = new DateOnly(2026, 5, 28);
+    private static RateSnapshot SampleSnapshot() =>
+        RateSnapshot.Create(Usd, AsOf, [ExchangeRate.Create(Usd, Eur, 0.92m, AsOf).Value]).Value;
 
     [Fact]
-    public async Task Handle_persists_snapshot_and_returns_event_on_success()
+    public async Task Handle_evicts_latest_rates_key_after_successful_ingest()
     {
+        // Arrange
         var provider = new InMemoryExchangeRateProvider();
-        var repository = new InMemoryExchangeRateRepository();
+        provider.Seed(Usd, AsOf, SampleSnapshot());
+        var repo = new InMemoryExchangeRateRepository();
         var uow = new InMemoryUnitOfWork();
-        var snapshot = RateSnapshot
-            .Create(Usd, AsOf, [ExchangeRate.Create(Usd, Eur, 0.92m, AsOf).Value])
-            .Value;
-        provider.Seed(Usd, AsOf, snapshot);
-        var command = new IngestDailyRatesCommand("USD", AsOf);
+        var cache = new InMemoryCacheService();
+        // pre-seed the key so we can prove it was removed
+        await cache.SetAsync(
+            CacheKeys.LatestRates("USD"),
+            "stale",
+            TimeSpan.FromMinutes(5),
+            TestContext.Current.CancellationToken
+        );
 
-        var @event = await IngestDailyRatesHandler.Handle(command, provider, repository, uow, NoCt);
-        var persisted = await repository.GetSnapshotAsync(Usd, AsOf, NoCt);
+        // Act
+        await IngestDailyRatesHandler.Handle(
+            new IngestDailyRatesCommand("USD", AsOf),
+            provider,
+            repo,
+            uow,
+            cache,
+            TestContext.Current.CancellationToken
+        );
 
-        @event.Base.Should().Be(Usd);
-        @event.AsOf.Should().Be(AsOf);
-        @event.RateCount.Should().Be(1);
-        persisted.Should().NotBeNull().And.BeSameAs(snapshot);
-        uow.SaveCount.Should().Be(1);
+        // Assert
+        var afterIngest = await cache.GetAsync(
+            CacheKeys.LatestRates("USD"),
+            TestContext.Current.CancellationToken
+        );
+        afterIngest.Should().BeNull(); // the key was evicted
     }
 
     [Fact]
-    public async Task Handle_throws_when_provider_fails()
+    public async Task Handle_does_not_evict_when_provider_fails()
     {
+        // Arrange
         var provider = new InMemoryExchangeRateProvider
         {
             FailWith = new DomainError("PROVIDER_UNAVAILABLE", "down"),
         };
-        var repository = new InMemoryExchangeRateRepository();
+        var repo = new InMemoryExchangeRateRepository();
         var uow = new InMemoryUnitOfWork();
-        var command = new IngestDailyRatesCommand("USD", AsOf);
+        var cache = new InMemoryCacheService();
+        await cache.SetAsync(
+            CacheKeys.LatestRates("USD"),
+            "stale",
+            TimeSpan.FromMinutes(5),
+            TestContext.Current.CancellationToken
+        );
 
-        var act = () => IngestDailyRatesHandler.Handle(command, provider, repository, uow, NoCt);
-        var persisted = await repository.GetSnapshotAsync(Usd, AsOf, NoCt);
+        // Act
+        var act = () =>
+            IngestDailyRatesHandler.Handle(
+                new IngestDailyRatesCommand("USD", AsOf),
+                provider,
+                repo,
+                uow,
+                cache,
+                TestContext.Current.CancellationToken
+            );
 
+        // Assert
         await act.Should().ThrowAsync<DomainException>();
-        persisted.Should().BeNull();
-        uow.SaveCount.Should().Be(0);
+        var stillCached = await cache.GetAsync(
+            CacheKeys.LatestRates("USD"),
+            TestContext.Current.CancellationToken
+        );
+        stillCached.Should().Be("stale"); // failure before commit → no eviction
     }
 }

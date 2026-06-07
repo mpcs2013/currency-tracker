@@ -27,7 +27,7 @@ public sealed class IngestDailyRatesCommandValidatorTests
 
         var result = validator.TestValidate(command);
 
-        result.ShouldHaveValidationErrorFor(x => x.Base);
+        result.ShouldHaveValidationErrorFor(x => x.BaseCurrency);
     }
 
     [Fact]
@@ -38,7 +38,7 @@ public sealed class IngestDailyRatesCommandValidatorTests
 
         var result = validator.TestValidate(command);
 
-        result.ShouldHaveValidationErrorFor(x => x.Base);
+        result.ShouldHaveValidationErrorFor(x => x.BaseCurrency);
     }
 
     [Fact]
