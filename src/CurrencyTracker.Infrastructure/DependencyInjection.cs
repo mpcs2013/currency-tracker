@@ -48,6 +48,20 @@ public static class DependencyInjection
             options.UseNpgsql(connectionString).UseSnakeCaseNamingConvention()
         );
 
+        // Redis distributed cache. The connection string is injected by the
+        // AppHost via WithReference(cache) (Phase 7.5) as ConnectionStrings__cache.
+        // Fail fast if it's absent — same discipline as the Postgres connection
+        // string in Phase 8. Never hardcode "localhost:6379".
+        var cacheConnection =
+            builder.Configuration.GetConnectionString("cache")
+            ?? throw new InvalidOperationException(
+                "ConnectionStrings__cache is not configured. Run via the AppHost "
+                    + "(WithReference(cache), Phase 7.5) so the connection string is injected."
+            );
+        builder.Services.AddStackExchangeRedisCache(options =>
+            options.Configuration = cacheConnection
+        );
+
         builder
             .Services.AddOptions<FrankfurterOptions>()
             .Bind(builder.Configuration.GetSection(FrankfurterOptions.SectionName))
