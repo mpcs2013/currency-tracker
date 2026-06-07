@@ -1,6 +1,8 @@
+using CurrencyTracker.Application.Abstractions.Caching;
 using CurrencyTracker.Application.Abstractions.Persistence;
 using CurrencyTracker.Application.Abstractions.Providers;
 using CurrencyTracker.Application.Abstractions.Time;
+using CurrencyTracker.Infrastructure.Caching;
 using CurrencyTracker.Infrastructure.Persistence;
 using CurrencyTracker.Infrastructure.Providers;
 using CurrencyTracker.Infrastructure.Time;
@@ -61,6 +63,7 @@ public static class DependencyInjection
         builder.Services.AddStackExchangeRedisCache(options =>
             options.Configuration = cacheConnection
         );
+        builder.Services.AddSingleton<ICacheService, RedisCacheService>();
 
         builder
             .Services.AddOptions<FrankfurterOptions>()
