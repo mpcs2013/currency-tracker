@@ -157,6 +157,14 @@ public sealed class TestThrowsFactory : WebApplicationFactory<Program>
             "ConnectionStrings__currencytracker",
             "Host=localhost;Database=ping-tests;Username=noop;Password=noop"
         );
+
+        // 10.1 — the cache fail-fast in AddInfrastructure also runs during
+        // Program.cs's top-level statements, before WebApplicationFactory can
+        // layer config. Set a junk ConnectionStrings__cache so AddInfrastructure
+        // builds. These tests never resolve ICacheService and
+        // AddStackExchangeRedisCache connects lazily, so no Redis connection is
+        // ever opened.
+        Environment.SetEnvironmentVariable("ConnectionStrings__cache", "localhost:6379");
     }
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)

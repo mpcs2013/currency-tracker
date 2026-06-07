@@ -47,6 +47,7 @@ internal static class IngestionStackHarness
             new Dictionary<string, string?>
             {
                 ["ConnectionStrings:currencytracker"] = connectionString,
+                ["ConnectionStrings:cache"] = "localhost:6379", // 10.1 — inert; harness never resolves ICacheService
                 ["Frankfurter:BaseUrl"] = frankfurterBaseUrl,
                 ["Frankfurter:Timeout"] = "00:00:10",
                 ["Frankfurter:UserAgent"] = "CurrencyTracker-IntegrationTests/1.0",
