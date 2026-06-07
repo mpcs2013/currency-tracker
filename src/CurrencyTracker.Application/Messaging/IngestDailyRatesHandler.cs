@@ -1,5 +1,7 @@
+using CurrencyTracker.Application.Abstractions.Caching;
 using CurrencyTracker.Application.Abstractions.Persistence;
 using CurrencyTracker.Application.Abstractions.Providers;
+using CurrencyTracker.Application.Caching;
 using CurrencyTracker.Domain.Common;
 using CurrencyTracker.Domain.Currencies;
 using CurrencyTracker.Domain.Exceptions;
@@ -38,6 +40,7 @@ public static class IngestDailyRatesHandler
     /// <param name="provider">External rate provider port.</param>
     /// <param name="repository">Exchange-rate repository port.</param>
     /// <param name="unitOfWork">Unit-of-work port.</param>
+    /// <param name="cache">Cache service port, for post-commit eviction of the latest-rates key.</param>
     /// <param name="cancellationToken">Token to cancel the operation.</param>
     /// <returns>The cascading <see cref="DailyRatesIngested"/> event.</returns>
     /// <exception cref="DomainException">Thrown when the provider returns
@@ -48,15 +51,16 @@ public static class IngestDailyRatesHandler
         IExchangeRateProvider provider,
         IExchangeRateRepository repository,
         IUnitOfWork unitOfWork,
+        ICacheService cache, // ← added in 10.6
         CancellationToken cancellationToken
     )
     {
         using var activity = IngestionTelemetry.ActivitySource.StartActivity("ingest.daily_rates");
-        activity?.SetTag("ingest.base", command.Base);
+        activity?.SetTag("ingest.base", command.BaseCurrency);
         activity?.SetTag("ingest.as_of", command.AsOf.ToString("yyyy-MM-dd"));
 
         // Validated by the FluentValidation middleware — parse is safe.
-        var baseCurrency = CurrencyCode.Create(command.Base).Value;
+        var baseCurrency = CurrencyCode.Create(command.BaseCurrency).Value;
 
         var snapshot = await provider.FetchAsync(baseCurrency, command.AsOf, cancellationToken);
 
@@ -65,13 +69,19 @@ public static class IngestDailyRatesHandler
             // No try/catch building an HTTP response — throw and let the
             // IExceptionHandler pipeline translate it to ProblemDetails.
             throw new DomainException(
-                $"Ingestion failed for {command.Base} on {command.AsOf:yyyy-MM-dd}: "
+                $"Ingestion failed for {command.BaseCurrency} on {command.AsOf:yyyy-MM-dd}: "
                     + $"{snapshot.Error.Code}."
             );
         }
 
         await repository.SaveSnapshotAsync(snapshot.Value, cancellationToken);
         await unitOfWork.SaveChangesAsync(cancellationToken);
+
+        // Read/write coherence: evict the exact key the latest-rates query
+        // writes, AFTER the commit, so the next read repopulates with the
+        // freshly-ingested data. Shared CacheKeys helper — never a KEYS/SCAN
+        // sweep (Phase 10.11).
+        await cache.RemoveAsync(CacheKeys.LatestRates(command.BaseCurrency), cancellationToken);
 
         IngestionTelemetry.RatesIngested.Add(snapshot.Value.Rates.Count);
 
