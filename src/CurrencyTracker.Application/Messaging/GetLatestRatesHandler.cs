@@ -3,8 +3,13 @@ using CurrencyTracker.Application.Abstractions.Persistence;
 using CurrencyTracker.Application.Caching;
 using CurrencyTracker.Application.Exceptions;
 using CurrencyTracker.Domain.Currencies;
+using FluentValidation;
+using Microsoft.AspNetCore.Mvc;
+using Wolverine.Http;
 
 namespace CurrencyTracker.Application.Messaging;
+
+public sealed record LatestRatesRequest([property: FromQuery(Name = "base")] string? BaseCode);
 
 /// <summary>
 /// Cache-aside handler for <see cref="GetLatestRatesQuery"/>. Returns the
@@ -16,7 +21,11 @@ namespace CurrencyTracker.Application.Messaging;
 /// <see cref="NotFoundException"/> (translated to 404 by the pipeline), so
 /// the handler contains no <c>try</c>/<c>catch</c>.
 /// </summary>
-public sealed class GetLatestRatesHandler(IExchangeRateRepository repository, ICacheService cache)
+public sealed class GetLatestRatesHandler(
+    IExchangeRateRepository repository,
+    ICacheService cache,
+    IValidator<GetLatestRatesQuery> validator
+)
 {
     /// <summary>Relative TTL for a cached latest-rates entry. Jitter is the adapter's concern.</summary>
     private static readonly TimeSpan LatestRatesTtl = TimeSpan.FromMinutes(5);
@@ -24,11 +33,22 @@ public sealed class GetLatestRatesHandler(IExchangeRateRepository repository, IC
     /// <summary>
     /// Handles the latest-rates query with cache-aside semantics.
     /// </summary>
-    /// <param name="query">The validated query.</param>
+    /// <param name="request">The query-bound request payload.</param>
     /// <param name="cancellationToken">Token to cancel the operation.</param>
     /// <returns>The latest rates for the base currency.</returns>
     /// <exception cref="NotFoundException">No snapshot exists for the base
     /// currency; mapped to 404 by the <c>IExceptionHandler</c> pipeline.</exception>
+    [WolverineGet("/api/v1/rates/latest")]
+    public async Task<IReadOnlyList<ExchangeRateDto>> Handle(
+        [FromQuery] LatestRatesRequest request,
+        CancellationToken cancellationToken
+    )
+    {
+        var query = new GetLatestRatesQuery(request.BaseCode ?? string.Empty);
+        await validator.ValidateAndThrowAsync(query, cancellationToken);
+        return await Handle(query, cancellationToken);
+    }
+
     public Task<IReadOnlyList<ExchangeRateDto>> Handle(
         GetLatestRatesQuery query,
         CancellationToken cancellationToken
