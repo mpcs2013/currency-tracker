@@ -26,6 +26,22 @@ public interface IExchangeRateRepository
     );
 
     /// <summary>
+    /// Retrieves all snapshots for <paramref name="baseCurrency"/> in the
+    /// specified date range.
+    /// </summary>
+    /// <param name="baseCurrency">The base currency of the snapshots.</param>
+    /// <param name="fromInclusive">The start date of the range (inclusive).</param>
+    /// <param name="toInclusive">The end date of the range (inclusive).</param>
+    /// <param name="cancellationToken">Token to cancel the underlying I/O.</param>
+    /// <returns>The snapshots in the specified range.</returns>
+    Task<IReadOnlyList<RateSnapshot>> GetSnapshotsInRangeAsync(
+        CurrencyCode baseCurrency,
+        DateOnly fromInclusive,
+        DateOnly toInclusive,
+        CancellationToken cancellationToken
+    );
+
+    /// <summary>
     /// Retrieves the most recent snapshot for <paramref name="baseCurrency"/>
     /// — the one with the greatest <c>AsOf</c> — with its owned rates loaded,
     /// or <see langword="null"/> if no snapshot exists for that base.

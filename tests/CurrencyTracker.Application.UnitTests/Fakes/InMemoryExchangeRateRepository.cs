@@ -52,4 +52,25 @@ public sealed class InMemoryExchangeRateRepository : IExchangeRateRepository
         _store[(snapshot.Base, snapshot.AsOf)] = snapshot;
         return Task.CompletedTask;
     }
+
+    /// <inheritdoc />
+    public Task<IReadOnlyList<RateSnapshot>> GetSnapshotsInRangeAsync(
+        CurrencyCode baseCurrency,
+        DateOnly fromInclusive,
+        DateOnly toInclusive,
+        CancellationToken cancellationToken
+    )
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        var list = _store
+            .Where(kvp =>
+                kvp.Key.Item1.Equals(baseCurrency)
+                && kvp.Key.Item2 >= fromInclusive
+                && kvp.Key.Item2 <= toInclusive
+            )
+            .OrderBy(kvp => kvp.Key.Item2)
+            .Select(kvp => kvp.Value)
+            .ToList();
+        return Task.FromResult<IReadOnlyList<RateSnapshot>>(list);
+    }
 }
