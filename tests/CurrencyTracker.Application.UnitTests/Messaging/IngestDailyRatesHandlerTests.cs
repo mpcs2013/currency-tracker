@@ -14,6 +14,7 @@ public sealed class IngestDailyRatesHandlerTests
     private static readonly CurrencyCode Usd = CurrencyCode.Create("USD").Value;
     private static readonly CurrencyCode Eur = CurrencyCode.Create("EUR").Value;
     private static readonly DateOnly AsOf = new DateOnly(2026, 5, 28);
+
     private static RateSnapshot SampleSnapshot() =>
         RateSnapshot.Create(Usd, AsOf, [ExchangeRate.Create(Usd, Eur, 0.92m, AsOf).Value]).Value;
 
