@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
     <ItemGroup>
         <Compile Remove="Ping\**" />
         <EmbeddedResource Remove="Ping\**" />
@@ -6,6 +6,7 @@
     </ItemGroup>
     <ItemGroup>
         <PackageReference Include="FluentValidation" />
+        <PackageReference Include="Microsoft.Extensions.Hosting" />
         <PackageReference Include="WolverineFx" />
         <PackageReference Include="WolverineFx.Http" />
     </ItemGroup>

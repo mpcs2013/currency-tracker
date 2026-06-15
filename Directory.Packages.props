@@ -7,13 +7,13 @@
         <!-- Test -->
         <PackageVersion Include="Alba" Version="8.5.2" />
         <!-- Aspire -->
-        <PackageVersion Include="Aspire.Hosting.AppHost" Version="13.3.5" />
+        <PackageVersion Include="Aspire.Hosting.AppHost" Version="13.4.3" />
         <!-- Aspire-->
-        <PackageVersion Include="Aspire.Hosting.PostgreSQL" Version="13.3.5" />
+        <PackageVersion Include="Aspire.Hosting.PostgreSQL" Version="13.4.3" />
         <!-- Aspire-->
-        <PackageVersion Include="Aspire.Hosting.Redis" Version="13.3.5" />
+        <PackageVersion Include="Aspire.Hosting.Redis" Version="13.4.3" />
         <!-- Test -->
-        <PackageVersion Include="Aspire.Hosting.Testing" Version="13.3.5" />
+        <PackageVersion Include="Aspire.Hosting.Testing" Version="13.4.3" />
         <!-- Test -->
         <PackageVersion Include="coverlet.collector" Version="10.0.1" />
         <!-- Infrastructure -->
@@ -41,6 +41,8 @@
         />
         <!-- Worker -->
         <PackageVersion Include="Microsoft.Extensions.Hosting" Version="10.0.8" />
+        <!-- MessagePack for serialization - AppHost -->
+        <PackageVersion Include="MessagePack" Version="2.5.301" />
         <!-- Aspire -->
         <PackageVersion Include="Microsoft.Extensions.Http.Resilience" Version="10.6.0" />
         <!-- Aspire -->
