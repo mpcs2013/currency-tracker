@@ -43,6 +43,21 @@ internal sealed class EfExchangeRateRepository : IExchangeRateRepository
             .FirstOrDefaultAsync(s => s.Base == baseCurrency && s.AsOf == asOf, cancellationToken);
 
     /// <inheritdoc />
+    public async Task<IReadOnlyList<RateSnapshot>> GetSnapshotsInRangeAsync(
+        CurrencyCode baseCurrency,
+        DateOnly fromInclusive,
+        DateOnly toInclusive,
+        CancellationToken cancellationToken
+    )
+    {
+        return await _dbContext
+            .RateSnapshots.Include(s => s.Rates)
+            .Where(s => s.Base == baseCurrency && s.AsOf >= fromInclusive && s.AsOf <= toInclusive)
+            .OrderBy(s => s.AsOf)
+            .ToListAsync(cancellationToken);
+    }
+
+    /// <inheritdoc />
     public async Task SaveSnapshotAsync(RateSnapshot snapshot, CancellationToken cancellationToken)
     {
         var existing = await _dbContext
