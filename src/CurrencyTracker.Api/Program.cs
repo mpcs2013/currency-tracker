@@ -6,6 +6,7 @@ using CurrencyTracker.Application.Abstractions.Providers;
 using CurrencyTracker.Application.Messaging;
 using CurrencyTracker.Infrastructure;
 using CurrencyTracker.ServiceDefaults;
+using Scalar.AspNetCore;
 using Wolverine;
 using Wolverine.FluentValidation;
 using Wolverine.Http;
@@ -70,6 +71,7 @@ var app = builder.Build();
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
+    app.MapScalarApiReference();
 }
 
 app.UseExceptionHandler(); // ← added in 6.4
