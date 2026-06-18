@@ -65,10 +65,13 @@
         <PackageVersion Include="OpenTelemetry.Instrumentation.Http" Version="1.15.1" />
         <!-- Aspire -->
         <PackageVersion Include="OpenTelemetry.Instrumentation.Runtime" Version="1.15.1" />
+        <!-- Api -->
+        <PackageVersion Include="Scalar.AspNetCore" Version="2.16.4" />
         <!-- Test -->
         <PackageVersion Include="Testcontainers.PostgreSql" Version="4.12.0" />
         <!-- Test -->
         <PackageVersion Include="Testcontainers.Redis" Version="4.12.0" />
+        <!-- Test -->
         <PackageVersion Include="WireMock.Net" Version="2.9.0" />
         <!-- Application, Api -->
         <PackageVersion Include="WolverineFx" Version="6.3.2" />

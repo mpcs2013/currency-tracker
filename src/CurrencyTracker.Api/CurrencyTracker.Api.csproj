@@ -8,6 +8,7 @@
     <ItemGroup>
         <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
         <PackageReference Include="Microsoft.EntityFrameworkCore.Design" />
+        <PackageReference Include="Scalar.AspNetCore" />
         <PackageReference Include="WolverineFx" />
         <PackageReference Include="WolverineFx.FluentValidation" />
         <PackageReference Include="WolverineFx.Http" />
