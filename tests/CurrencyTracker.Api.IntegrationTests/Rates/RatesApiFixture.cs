@@ -1,6 +1,5 @@
 using Alba;
 using CurrencyTracker.Application.Abstractions.Persistence;
-using CurrencyTracker.Domain.Currencies;
 using CurrencyTracker.Domain.Rates;
 using Microsoft.Extensions.DependencyInjection;
 using Testcontainers.PostgreSql;

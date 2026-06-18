@@ -1,5 +1,6 @@
 using System.Text.Json;
 using CurrencyTracker.Application.Abstractions.Caching;
+using CurrencyTracker.Application.Caching;
 using Microsoft.Extensions.Caching.Distributed;
 
 namespace CurrencyTracker.Infrastructure.Caching;
@@ -56,6 +57,7 @@ internal sealed class RedisCacheService(IDistributedCache cache) : ICacheService
                 );
         }
 
+        CacheTelemetry.Misses.Add(1);
         var fresh = await factory(cancellationToken).ConfigureAwait(false);
         var serialised = JsonSerializer.Serialize(fresh);
         await SetAsync(key, serialised, ttl, cancellationToken).ConfigureAwait(false);
