@@ -4,47 +4,39 @@ using CurrencyTracker.Application.Caching;
 using CurrencyTracker.Application.Exceptions;
 using CurrencyTracker.Domain.Currencies;
 using FluentValidation;
-using Microsoft.AspNetCore.Mvc;
-using Wolverine.Http;
+using Microsoft.AspNetCore.Mvc; // [FromQuery]
+using Wolverine.Http; // [WolverineGet]
 
 namespace CurrencyTracker.Application.Messaging;
 
-public sealed record LatestRatesRequest([property: FromQuery(Name = "base")] string? BaseCode);
-
 /// <summary>
-/// Cache-aside handler for <see cref="GetLatestRatesQuery"/>. Returns the
-/// latest persisted rates for the requested base currency, served from the
-/// cache on a hit and read through <see cref="IExchangeRateRepository"/> on
-/// a miss (then cached with a jittered TTL). The query's validity is
-/// guaranteed by the <c>UseFluentValidation()</c> middleware (Phase 6), so
-/// the handler does no input checking; a missing snapshot throws
-/// <see cref="NotFoundException"/> (translated to 404 by the pipeline), so
-/// the handler contains no <c>try</c>/<c>catch</c>.
+/// Query-bound request for the latest-rates endpoint. Wolverine binds a
+/// [FromQuery] complex type by matching each public settable property to a
+/// query-string key by NAME (case-insensitive) and ignores
+/// [FromQuery(Name = …)] (Wolverine #641). Hence a settable, nullable
+/// property named Base (binds ?base=) with a no-arg ctor — the shape
+/// Wolverine recommends for a bag of optional query values.
 /// </summary>
+public sealed class LatestRatesRequest
+{
+    public string? Base { get; set; }
+}
+
 public sealed class GetLatestRatesHandler(
     IExchangeRateRepository repository,
     ICacheService cache,
     IValidator<GetLatestRatesQuery> validator
 )
 {
-    /// <summary>Relative TTL for a cached latest-rates entry. Jitter is the adapter's concern.</summary>
     private static readonly TimeSpan LatestRatesTtl = TimeSpan.FromMinutes(5);
 
-    /// <summary>
-    /// Handles the latest-rates query with cache-aside semantics.
-    /// </summary>
-    /// <param name="request">The query-bound request payload.</param>
-    /// <param name="cancellationToken">Token to cancel the operation.</param>
-    /// <returns>The latest rates for the base currency.</returns>
-    /// <exception cref="NotFoundException">No snapshot exists for the base
-    /// currency; mapped to 404 by the <c>IExceptionHandler</c> pipeline.</exception>
     [WolverineGet("/api/v1/rates/latest")]
     public async Task<IReadOnlyList<ExchangeRateDto>> Handle(
         [FromQuery] LatestRatesRequest request,
         CancellationToken cancellationToken
     )
     {
-        var query = new GetLatestRatesQuery(request.BaseCode ?? string.Empty);
+        var query = new GetLatestRatesQuery(request.Base ?? string.Empty);
         await validator.ValidateAndThrowAsync(query, cancellationToken);
         return await Handle(query, cancellationToken);
     }
@@ -57,11 +49,8 @@ public sealed class GetLatestRatesHandler(
             CacheKeys.LatestRates(query.Base),
             async token =>
             {
-                // Validated by the middleware — parse is safe.
                 var baseCode = CurrencyCode.Create(query.Base).Value;
-
                 var snapshot = await repository.GetLatestSnapshotAsync(baseCode, token);
-
                 return snapshot is null
                     ? throw new NotFoundException("ExchangeRate", query.Base)
                     : ExchangeRateDto.FromSnapshot(snapshot);
