@@ -46,3 +46,22 @@ from the Aspire-injected connection string. An agent that adds the Aspire
 client integration "for the health checks" has changed the decision — that's
 a new ADR, not a drive-by. An agent that hardcodes the connection string has
 violated the no-hardcoded-connection-strings rule.
+
+## Security posture (Phase 10.11 review)
+
+- **No PII in keys.** Keys come only from `CacheKeys` and contain currency
+  codes (`rates:latest:{base}`). No identifiers, tokens, or headers.
+  Forward rule: Phase 11 per-user caching must derive a stable,
+  non-reversible key — never embed a raw user id or token.
+- **Bounded key space.** The base is validated (`^[A-Z]{3}$`) before the
+  handler runs, so callers can't populate arbitrary keys.
+- **Bounded value.** Cached payload is one snapshot's rate list — small,
+  not attacker-controlled.
+- **Bounded eviction.** Invalidation removes one exact key; no `KEYS`/`SCAN`
+  pattern sweeps (a sweep is O(keyspace) and a DoS vector).
+- **Bounded TTL.** Every cache entry has a finite, jittered TTL; nothing
+  is cached forever.
+- **OWASP:** API4 (resource consumption) addressed by the bounds above and
+  the 10.7 range cap; API8 (misconfig) — keys carry no secrets, Redis is an
+  internal resource (never a public ingress); API9 — `/api/v1/rates/*` are
+  unauthenticated until Phase 11 (known, time-boxed).
