@@ -7,6 +7,7 @@ using CurrencyTracker.Application.Messaging;
 using CurrencyTracker.Infrastructure;
 using CurrencyTracker.ServiceDefaults;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
 using Scalar.AspNetCore;
 using Wolverine;
 using Wolverine.FluentValidation;
@@ -80,8 +81,30 @@ builder
         // https for metadata everywhere else (11.4 acceptance criterion).
         options.RequireHttpsMetadata = !builder.Environment.IsDevelopment();
 
-        // Full TokenValidationParameters (issuer/audience/lifetime/signing
-        // key, 30s skew, claim types) land in 11.5.
+        // Don't rewrite sub/roles to legacy WS-* schema URIs; the adapter (11.6)
+        // and Part 2's RBAC read the claim names the realm mappers emit.
+        options.MapInboundClaims = false;
+
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidIssuer = options.Authority,
+
+            ValidateAudience = true,
+            ValidAudience = auth["Audience"],
+
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+
+            // Tight, NTP-grade tolerance — not the 5-minute default that keeps an
+            // expired token live for minutes past exp.
+            ClockSkew = TimeSpan.FromSeconds(30),
+
+            // With MapInboundClaims=false, name these explicitly so User.Identity.Name
+            // and [Authorize(Roles=...)] (Part 2) read the right claims.
+            NameClaimType = "preferred_username",
+            RoleClaimType = "roles",
+        };
     });
 
 builder.Services.AddAuthorization();
