@@ -18,6 +18,7 @@
     <File Path="docs/decisions/0005-wiremock-http-stubbing.md" />
     <File Path="docs/decisions/0006-wolverine-service-location-for-internal-adapters.md" />
     <File Path="docs/decisions/0007-redis-distributed-cache.md" />
+    <File Path="docs/decisions/0008-openapi-ui.md" />
     <File Path="docs/decisions/0009-postgres-image-pin.md" />
   </Folder>
   <Folder Name="/Solution Items/">
