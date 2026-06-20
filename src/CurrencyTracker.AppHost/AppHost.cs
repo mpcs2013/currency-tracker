@@ -55,9 +55,7 @@ builder
     .WaitFor(keycloak) // ← 11.3
     .WithEnvironment(
         "Authentication__Authority",
-        ReferenceExpression.Create(
-            $"{keycloak.GetEndpoint("http")}/realms/currency-tracker"
-        )
+        ReferenceExpression.Create($"{keycloak.GetEndpoint("http")}/realms/currency-tracker")
     ) // ← 11.3: composed issuer, never hardcoded
     .WithEnvironment("Authentication__Audience", "currency-tracker-api"); // ← 11.3
 

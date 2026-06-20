@@ -6,6 +6,7 @@ using CurrencyTracker.Application.Abstractions.Providers;
 using CurrencyTracker.Application.Messaging;
 using CurrencyTracker.Infrastructure;
 using CurrencyTracker.ServiceDefaults;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Scalar.AspNetCore;
 using Wolverine;
 using Wolverine.FluentValidation;
@@ -61,6 +62,30 @@ builder.Services.AddProblemDetails(options =>
     };
 });
 
+builder
+    .Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        var auth = builder.Configuration.GetSection("Authentication");
+
+        options.Authority =
+            auth["Authority"]
+            ?? throw new InvalidOperationException(
+                "Authentication:Authority is not configured. The AppHost injects it "
+                    + "as Authentication__Authority (Phase 11.3); for non-Aspire runs, "
+                    + "set it manually."
+            );
+
+        // Keycloak serves metadata over http on 8080 in local dev; require
+        // https for metadata everywhere else (11.4 acceptance criterion).
+        options.RequireHttpsMetadata = !builder.Environment.IsDevelopment();
+
+        // Full TokenValidationParameters (issuer/audience/lifetime/signing
+        // key, 30s skew, claim types) land in 11.5.
+    });
+
+builder.Services.AddAuthorization();
+
 builder.Services.AddExceptionHandler<ValidationExceptionHandler>(); // ← added in 6.4
 builder.Services.AddExceptionHandler<NotFoundExceptionHandler>(); // ← added in 6.6
 builder.Services.AddExceptionHandler<DomainExceptionHandler>(); // ← added in 6.6
@@ -75,6 +100,8 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseExceptionHandler(); // ← added in 6.4
+app.UseAuthentication(); // ← added in 11.4 (validates a presented token; rejects nothing yet)
+app.UseAuthorization(); // ← added in 11.4 (no RequireAuthorization until 11.7)
 app.MapDefaultEndpoints();
 app.MapWolverineEndpoints();
 
