@@ -15,8 +15,43 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
+  changes:
+    name: changes
+    runs-on: ubuntu-latest
+    outputs:
+      code: ${{ steps.filter.outputs.code }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Detect non-doc changes
+        id: filter
+        shell: bash
+        run: |
+            # On push to main / manual dispatch, always run the full pipeline.
+            if [ "${{ github.event_name }}" != "pull_request" ]; then
+                echo "code=true" >> "$GITHUB_OUTPUT"
+                echo "::notice::${{ github.event_name }} event - running full CI."
+                exit 0
+            fi
+            base="${{ github.event.pull_request.base.sha }}"
+            changed="$(git diff --name-only "$base" HEAD)"
+            echo "Changed files:"
+            echo "$changed"
+            # code = any changed file that is NOT a doc (skippable set: **/*.md, docs/**).
+            if printf '%s\n' "$changed" | grep -vqE '(\.md$|^docs/)'; then
+                echo "code=true" >> "$GITHUB_OUTPUT"
+            else
+                echo "code=false" >> "$GITHUB_OUTPUT"
+                echo "::notice::Doc-only change - skipping build, tests, and integration jobs."
+            fi
+
   ci:
     name: ci
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
 
     steps:
@@ -67,7 +102,7 @@ jobs:
 
       - name: Build
         if: steps.detect.outputs.has_csharp == 'true'
-        run: dotnet build -c --no-restore
+        run: dotnet build -c Release --no-restore
 
       - name: Test
         if: steps.detect.outputs.has_csharp == 'true'
@@ -75,8 +110,10 @@ jobs:
 
   aspire-smoke:
     name: aspire-smoke
+    needs: [changes, ci]
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
-    needs: ci
+			 
     timeout-minutes: 5
 
     steps:
@@ -109,8 +146,10 @@ jobs:
 
   infrastructure-integration-tests:
     name: infrastructure-integration-tests
+    needs: [changes, ci]
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
-    needs: ci
+			 
     timeout-minutes: 5
 
     steps:
