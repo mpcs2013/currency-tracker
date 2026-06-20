@@ -42,14 +42,24 @@ var cache = builder.AddRedis("cache").WithDataVolume("currencytracker-redisdata"
 var keycloak = builder
     .AddKeycloak("keycloak", 8080)
     .WithImageTag("26.6.0")
-    .WithDataVolume("currencytracker-keycloakdata");
+    .WithDataVolume("currencytracker-keycloakdata")
+    .WithRealmImport("./realms"); // ← 11.3: mounts realms/*.json into the import dir
 
 builder
     .AddProject<Projects.CurrencyTracker_Api>("api")
     .WithReference(currencytrackerDb)
     .WaitFor(currencytrackerDb)
     .WithReference(cache)
-    .WaitFor(cache);
+    .WaitFor(cache)
+    .WithReference(keycloak) // ← 11.3
+    .WaitFor(keycloak) // ← 11.3
+    .WithEnvironment(
+        "Authentication__Authority",
+        ReferenceExpression.Create(
+            $"{keycloak.GetEndpoint("http")}/realms/currency-tracker"
+        )
+    ) // ← 11.3: composed issuer, never hardcoded
+    .WithEnvironment("Authentication__Audience", "currency-tracker-api"); // ← 11.3
 
 builder
     .AddProject<Projects.CurrencyTracker_Worker>("worker")
