@@ -6,6 +6,10 @@
     </PropertyGroup>
 
     <ItemGroup>
+        <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    </ItemGroup>
+
+    <ItemGroup>
         <ProjectReference Include="..\CurrencyTracker.Application\CurrencyTracker.Application.csproj" />
         <ProjectReference Include="..\CurrencyTracker.Domain\CurrencyTracker.Domain.csproj" />
     </ItemGroup>

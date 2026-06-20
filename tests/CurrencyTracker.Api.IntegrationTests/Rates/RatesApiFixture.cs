@@ -33,6 +33,11 @@ public sealed class RatesApiFixture : IAsyncLifetime
             );
             builder.UseSetting("ConnectionStrings:cache", _redis.GetConnectionString());
             // Development env so the dev MigrationRunner applies migrations to the container.
+            builder.UseSetting(
+                "Authentication:Authority",
+                "https://test.local/realms/currency-tracker"
+            );
+            builder.UseSetting("Authentication:Audience", "currency-tracker-api");
         });
     }
 

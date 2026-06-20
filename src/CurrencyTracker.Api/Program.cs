@@ -63,19 +63,31 @@ builder.Services.AddProblemDetails(options =>
     };
 });
 
+// Read the issuer authority the AppHost injects (11.3) and fail fast at BOOT
+// if it's missing. This is a top-level statement, so a misconfigured host
+// dies at startup — not lazily on the first authenticated request, which is
+// what a `?? throw` inside the AddJwtBearer callback would do. Mirrors the
+// connection-string fail-fast in AddInfrastructure. (Audience is read in 11.5,
+// where it's first consumed, so its own fail-fast lands there.)
+var authAuthority =
+    builder.Configuration["Authentication:Authority"]
+    ?? throw new InvalidOperationException(
+        "Authentication:Authority is not configured. The AppHost injects it as "
+            + "Authentication__Authority (Phase 11.3); non-Aspire hosts (including "
+            + "integration tests) must set it explicitly."
+    );
+var authAudience =
+    builder.Configuration["Authentication:Audience"]
+    ?? throw new InvalidOperationException(
+        "Authentication:Audience is not configured. The AppHost injects it as "
+            + "Authentication__Audience (Phase 11.3); non-Aspire hosts (including "
+            + "integration tests) must set it explicitly."
+    );
 builder
     .Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
         var auth = builder.Configuration.GetSection("Authentication");
-
-        options.Authority =
-            auth["Authority"]
-            ?? throw new InvalidOperationException(
-                "Authentication:Authority is not configured. The AppHost injects it "
-                    + "as Authentication__Authority (Phase 11.3); for non-Aspire runs, "
-                    + "set it manually."
-            );
 
         // Keycloak serves metadata over http on 8080 in local dev; require
         // https for metadata everywhere else (11.4 acceptance criterion).
@@ -88,10 +100,10 @@ builder
         options.TokenValidationParameters = new TokenValidationParameters
         {
             ValidateIssuer = true,
-            ValidIssuer = options.Authority,
+            ValidIssuer = authAuthority,
 
             ValidateAudience = true,
-            ValidAudience = auth["Audience"],
+            ValidAudience = authAudience,
 
             ValidateLifetime = true,
             ValidateIssuerSigningKey = true,

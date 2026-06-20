@@ -1,6 +1,7 @@
 using CurrencyTracker.Application.Abstractions.Caching;
 using CurrencyTracker.Application.Abstractions.Persistence;
 using CurrencyTracker.Application.Abstractions.Providers;
+using CurrencyTracker.Application.Abstractions.Security;
 using CurrencyTracker.Application.Abstractions.Time;
 using CurrencyTracker.Infrastructure.Caching;
 using CurrencyTracker.Infrastructure.Persistence;
@@ -114,6 +115,13 @@ public static class DependencyInjection
                     );
                 }
             );
+
+        // Current-user adapter: projects HttpContext.User onto the Phase 4
+        // ICurrentUser port. AddHttpContextAccessor supplies the ambient context;
+        // the adapter is internal, so it can only be registered here (ADR 0006).
+        // In the Worker (no HttpContext) this resolves to an anonymous view.
+        builder.Services.AddHttpContextAccessor();
+        builder.Services.AddScoped<ICurrentUser, Security.HttpContextCurrentUser>();
 
         builder.Services.AddSingleton<IDateTimeProvider, SystemDateTimeProvider>();
         builder.Services.AddScoped<IExchangeRateProvider, FrankfurterExchangeRateProvider>();
