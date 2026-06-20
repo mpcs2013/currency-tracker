@@ -27,8 +27,8 @@ public sealed class GetRateHistoryHandler(IExchangeRateRepository repository)
 
         var snapshots = await repository.GetSnapshotsInRangeAsync(
             baseCode,
-            query.FromInclusive,
-            query.ToInclusive,
+            query.From,
+            query.To,
             cancellationToken
         );
 

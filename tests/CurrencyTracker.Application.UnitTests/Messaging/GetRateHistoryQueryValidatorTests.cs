@@ -33,7 +33,7 @@ public sealed class GetRateHistoryQueryValidatorTests
         // FromInclusive (To) is after ToInclusive (From).
         var result = _validator.TestValidate(new GetRateHistoryQuery("USD", "EUR", To, From));
 
-        result.ShouldHaveValidationErrorFor(q => q.FromInclusive);
+        result.ShouldHaveValidationErrorFor(q => q.From);
     }
 
     [Fact]

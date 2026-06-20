@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using FluentValidation;
 using Microsoft.AspNetCore.Mvc; // [property: FromQuery] on the record
 
@@ -13,13 +14,27 @@ namespace CurrencyTracker.Application.Messaging;
 /// </summary>
 /// <param name="Base">Base currency code.</param>
 /// <param name="Quote">Quote currency code.</param>
-/// <param name="FromInclusive">Inclusive range start (bound from <c>?from=</c>).</param>
-/// <param name="ToInclusive">Inclusive range end (bound from <c>?to=</c>).</param>
+/// <param name="From">Inclusive range start (bound from <c>?from=</c>).</param>
+/// <param name="To">Inclusive range end (bound from <c>?to=</c>).</param>
 public sealed record GetRateHistoryQuery(
     string Base,
     string Quote,
-    [property: FromQuery(Name = "from")] DateOnly FromInclusive,
-    [property: FromQuery(Name = "to")] DateOnly ToInclusive
+    [property: SuppressMessage(
+        "Naming",
+        "CA1716:Identifiers should not match keywords",
+        Justification = "Public query-string binding key for GET /api/v1/rates/history; "
+            + "Wolverine binds by member name and ignores [FromQuery(Name)] (#641), so the "
+            + "member must be named 'From' to bind ?from=."
+    )]
+        DateOnly From,
+    [property: SuppressMessage(
+        "Naming",
+        "CA1716:Identifiers should not match keywords",
+        Justification = "Public query-string binding key for GET /api/v1/rates/history; "
+            + "Wolverine binds by member name and ignores [FromQuery(Name)] (#641), so the "
+            + "member must be named 'To' to bind ?to=."
+    )]
+        DateOnly To
 );
 
 /// <summary>A single dated rate point in a history response.</summary>
@@ -42,11 +57,11 @@ public sealed class GetRateHistoryQueryValidator : AbstractValidator<GetRateHist
         RuleFor(q => q.Base).NotEmpty().Matches("^[A-Z]{3}$");
         RuleFor(q => q.Quote).NotEmpty().Matches("^[A-Z]{3}$");
         RuleFor(q => q).Must(q => q.Base != q.Quote).WithMessage("Base and Quote must differ.");
-        RuleFor(q => q.FromInclusive)
-            .LessThanOrEqualTo(q => q.ToInclusive)
+        RuleFor(q => q.From)
+            .LessThanOrEqualTo(q => q.To)
             .WithMessage("From must be on or before To.");
         RuleFor(q => q)
-            .Must(q => q.ToInclusive.DayNumber - q.FromInclusive.DayNumber <= MaxRangeDays)
+            .Must(q => q.To.DayNumber - q.From.DayNumber <= MaxRangeDays)
             .WithMessage($"Date range must not exceed {MaxRangeDays} days.");
     }
 }
