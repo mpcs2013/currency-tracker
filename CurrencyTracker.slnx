@@ -1,34 +1,9 @@
 <Solution>
-  <Folder Name="/docs/">
-    <File Path="docs/caching.md" />
-    <File Path="docs/domain.md" />
-    <File Path="docs/errors.md" />
-    <File Path="docs/ports.md" />
-    <File Path="docs/prompts.md" />
-    <File Path="docs/wolverine.md" />
-    <File Path="docs/workflow.md" />
-  </Folder>
-  <Folder Name="/docs/decisions/">
-    <File Path="0005-wiremock-http-stubbing.md" />
-    <File Path="0006-wolverine-service-location-for-internal-adapters.md" />
-    <File Path="docs/decisions/0001-stack-choices.md" />
-    <File Path="docs/decisions/0002-clean-architecture-dependency-direction.md" />
-    <File Path="docs/decisions/0003-wolverine-no-marker-interfaces.md" />
-    <File Path="docs/decisions/0004-ef-core-persistence.md" />
-    <File Path="docs/decisions/0005-wiremock-http-stubbing.md" />
-    <File Path="docs/decisions/0006-wolverine-service-location-for-internal-adapters.md" />
-    <File Path="docs/decisions/0007-redis-distributed-cache.md" />
-    <File Path="docs/decisions/0008-openapi-ui.md" />
-    <File Path="docs/decisions/0009-postgres-image-pin.md" />
-    <File Path="docs/decisions/0010-oidc-jwt-auth.md" />
-  </Folder>
   <Folder Name="/Solution Items/">
     <File Path=".editorconfig" />
-    <File Path="AGENTS.md" />
     <File Path="Directory.Build.props" />
     <File Path="Directory.Packages.props" />
     <File Path="global.json" />
-    <File Path="README.md" />
   </Folder>
   <Folder Name="/src/">
     <Project Path="src/CurrencyTracker.Api/CurrencyTracker.Api.csproj" />
