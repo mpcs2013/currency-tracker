@@ -165,6 +165,12 @@ public sealed class TestThrowsFactory : WebApplicationFactory<Program>
         // AddStackExchangeRedisCache connects lazily, so no Redis connection is
         // ever opened.
         Environment.SetEnvironmentVariable("ConnectionStrings__cache", "localhost:6379");
+
+        Environment.SetEnvironmentVariable(
+            "Authentication__Authority",
+            "https://test.local/realms/currency-tracker"
+        );
+        Environment.SetEnvironmentVariable("Authentication__Audience", "currency-tracker-api");
     }
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)

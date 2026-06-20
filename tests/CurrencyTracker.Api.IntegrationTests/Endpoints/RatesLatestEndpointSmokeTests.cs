@@ -20,8 +20,14 @@ public sealed class RatesLatestEndpointSmokeTests
     public async Task Invalid_or_missing_base_returns_400_problem_details(string url)
     {
         await using var host = await AlbaHost.For<Program>(builder =>
-            builder.UseEnvironment("Testing")
-        );
+        {
+            builder.UseEnvironment("Testing");
+            builder.UseSetting(
+                "Authentication:Authority",
+                "https://test.local/realms/currency-tracker"
+            );
+            builder.UseSetting("Authentication:Audience", "currency-tracker-api");
+        });
 
         await host.Scenario(s =>
         {
