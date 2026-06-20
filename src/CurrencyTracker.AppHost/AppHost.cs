@@ -31,6 +31,19 @@ var currencytrackerDb = postgres.AddDatabase("currencytracker");
 // calls WithReference(cache) in 7.5.
 var cache = builder.AddRedis("cache").WithDataVolume("currencytracker-redisdata");
 
+// Keycloak OIDC provider. Stable host port 8080 keeps the issuer URL
+// (http://localhost:8080/realms/currency-tracker) constant across AppHost
+// restarts, so tokens minted on one run still validate on the next. The
+// image tag is pinned (ADR 0009 discipline) so a transitive Aspire bump
+// can't silently change the engine and break realm import. The named data
+// volume persists realm/user state; wipe it with
+// `docker volume rm currencytracker-keycloakdata`. Realm import and the
+// api env wiring land in 11.2/11.3.
+var keycloak = builder
+    .AddKeycloak("keycloak", 8080)
+    .WithImageTag("26.6.0")
+    .WithDataVolume("currencytracker-keycloakdata");
+
 builder
     .AddProject<Projects.CurrencyTracker_Api>("api")
     .WithReference(currencytrackerDb)
