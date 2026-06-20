@@ -53,12 +53,18 @@
       "username": "tester",
       "enabled": true,
       "emailVerified": true,
+      "email": "tester@example.com",
       "firstName": "Test",
       "lastName": "User",
+      "requiredActions": [],
       "credentials": [
-        { "type": "password", "value": "Passw0rd!", "temporary": false }
+        {
+          "type": "password",
+          "value": "Passw0rd!",
+          "temporary": false
+        }
       ],
-      "realmRoles": ["user"]
+      "realmRoles": [ "user" ]
     }
   ]
 }

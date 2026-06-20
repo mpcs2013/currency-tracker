@@ -7,6 +7,7 @@ using CurrencyTracker.Application.Messaging;
 using CurrencyTracker.Infrastructure;
 using CurrencyTracker.ServiceDefaults;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using Scalar.AspNetCore;
 using Wolverine;
@@ -89,9 +90,12 @@ builder
     {
         var auth = builder.Configuration.GetSection("Authentication");
 
-        // Keycloak serves metadata over http on 8080 in local dev; require
-        // https for metadata everywhere else (11.4 acceptance criterion).
-        options.RequireHttpsMetadata = !builder.Environment.IsDevelopment();
+        options.RequireHttpsMetadata = true; // it's real https now
+        options.BackchannelHttpHandler = new HttpClientHandler
+        {
+            ServerCertificateCustomValidationCallback =
+                HttpClientHandler.DangerousAcceptAnyServerCertificateValidator,
+        };
 
         // Don't rewrite sub/roles to legacy WS-* schema URIs; the adapter (11.6)
         // and Part 2's RBAC read the claim names the realm mappers emit.

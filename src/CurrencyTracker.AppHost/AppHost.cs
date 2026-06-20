@@ -43,7 +43,12 @@ var keycloak = builder
     .AddKeycloak("keycloak", 8080)
     .WithImageTag("26.6.0")
     .WithDataVolume("currencytracker-keycloakdata")
-    .WithRealmImport("./realms"); // ← 11.3: mounts realms/*.json into the import dir
+    .WithRealmImport("./realms") // ← 11.3: mounts realms/*.json into the import dir
+//.WithEnvironment("KC_HOSTNAME", "localhost")
+//.WithEnvironment("KC_HTTP_ENABLED", "true")
+//.WithEnvironment("KC_HOSTNAME_STRICT", "false")
+//.WithEnvironment("KC_HOSTNAME_STRICT_HTTPS", "false")
+;
 
 builder
     .AddProject<Projects.CurrencyTracker_Api>("api")
@@ -55,7 +60,9 @@ builder
     .WaitFor(keycloak) // ← 11.3
     .WithEnvironment(
         "Authentication__Authority",
-        ReferenceExpression.Create($"{keycloak.GetEndpoint("http")}/realms/currency-tracker")
+        ReferenceExpression.Create(
+            $"https://{keycloak.GetEndpoint("http").Property(EndpointProperty.Host)}:{keycloak.GetEndpoint("http").Property(EndpointProperty.Port)}/realms/currency-tracker"
+        )
     ) // ← 11.3: composed issuer, never hardcoded
     .WithEnvironment("Authentication__Audience", "currency-tracker-api"); // ← 11.3
 
