@@ -78,3 +78,25 @@ Two Entra specifics worth knowing:
   value, never a crash). `IsAuthenticated` stays `true`. (If a stable per-user
   GUID is ever needed, Entra's `oid` claim carries it — a future, ADR-worthy
   change to the adapter, not a Phase 11 one.)  
+  
+## Security posture (Phase 11.12 review)
+
+- **Audience strictly validated.** `ValidateAudience = true`,
+  `ValidAudience = currency-tracker-api`; issuer, lifetime, and signing key
+  validated; clock skew clamped to 30s (`Program.cs`, 11.5). A wrong-audience
+  token is rejected (11.9).
+- **Secure-by-default.** `RequireAuthorizeOnAll()` protects every Wolverine
+  endpoint; `/admin/ingest` additionally requires the `admin` role (policy).
+  Health endpoints (`/health`, `/alive`) are intentionally anonymous (11.7/11.8).
+- **No token logging.** No log statement emits the `Authorization` header or a
+  raw token; framework logging is header-free. Forward rule: Phase 13's Serilog
+  PII-redaction enricher must strip `Authorization` and token-shaped fields.
+- **No JWT in URLs.** Tokens are accepted in the `Authorization` header only;
+  no endpoint or doc passes a token in a query string (OWASP API8).
+- **No JWT in cache keys.** Cache keys come only from `CacheKeys`
+  (`rates:latest:{base}`) — currency codes, never identity (reaffirms 10.11).
+- **Metadata over https outside Development.** `RequireHttpsMetadata` is true
+  outside `Development` (11.4).
+- **401/403 are ProblemDetails.** Auth failures return
+  `application/problem+json` with a `traceId`, via `UseStatusCodePages` over
+  the Phase 6 funnel — no token echoed in the error body.
