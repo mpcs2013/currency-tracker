@@ -90,12 +90,18 @@ builder
     {
         var auth = builder.Configuration.GetSection("Authentication");
 
-        options.RequireHttpsMetadata = true; // it's real https now
-        options.BackchannelHttpHandler = new HttpClientHandler
+        options.Authority = authAuthority;
+        options.MetadataAddress = $"{authAuthority.TrimEnd('/')}/.well-known/openid-configuration";
+
+        if (builder.Environment.IsDevelopment())
         {
-            ServerCertificateCustomValidationCallback =
-                HttpClientHandler.DangerousAcceptAnyServerCertificateValidator,
-        };
+            options.RequireHttpsMetadata = false; // local Keycloak dev cert
+            options.BackchannelHttpHandler = new HttpClientHandler
+            {
+                ServerCertificateCustomValidationCallback =
+                    HttpClientHandler.DangerousAcceptAnyServerCertificateValidator,
+            };
+        }
 
         // Don't rewrite sub/roles to legacy WS-* schema URIs; the adapter (11.6)
         // and Part 2's RBAC read the claim names the realm mappers emit.
