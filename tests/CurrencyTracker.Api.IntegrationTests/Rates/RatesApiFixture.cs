@@ -1,4 +1,5 @@
 using Alba;
+using CurrencyTracker.Api.IntegrationTests.Auth;
 using CurrencyTracker.Application.Abstractions.Persistence;
 using CurrencyTracker.Domain.Rates;
 using Microsoft.Extensions.DependencyInjection;
@@ -38,6 +39,7 @@ public sealed class RatesApiFixture : IAsyncLifetime
                 "https://test.local/realms/currency-tracker"
             );
             builder.UseSetting("Authentication:Audience", "currency-tracker-api");
+            builder.UseTestJwtBearer(); // ← 11.7: trust TestJwt's signing key
         });
     }
 

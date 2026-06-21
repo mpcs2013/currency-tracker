@@ -1,4 +1,5 @@
 using Alba;
+using CurrencyTracker.Api.IntegrationTests.Auth;
 using CurrencyTracker.Application.Messaging;
 using CurrencyTracker.Domain.Currencies;
 using CurrencyTracker.Domain.Rates;
@@ -22,11 +23,13 @@ public sealed class RatesLatestApiTests : IClassFixture<RatesApiFixture>
         await _fixture.SeedSnapshotAsync(
             RateSnapshot.Create(Usd, AsOf, [ExchangeRate.Create(Usd, Eur, 0.92m, AsOf).Value]).Value
         );
+        var token = TestJwt.ForRoles("user");
 
         // Act + Assert
         var result = await _fixture.Host.Scenario(s =>
         {
             s.Get.Url("/api/v1/rates/latest?base=USD");
+            s.WithBearerToken(token);
             s.StatusCodeShouldBeOk();
         });
 
@@ -37,9 +40,12 @@ public sealed class RatesLatestApiTests : IClassFixture<RatesApiFixture>
     [Fact]
     public async Task Get_latest_returns_404_when_no_snapshot()
     {
+        var token = TestJwt.ForRoles("user");
+
         await _fixture.Host.Scenario(s =>
         {
             s.Get.Url("/api/v1/rates/latest?base=JPY"); // valid shape, no data
+            s.WithBearerToken(token);
             s.StatusCodeShouldBe(404);
             s.ContentTypeShouldBe("application/problem+json");
         });
