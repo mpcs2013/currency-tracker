@@ -55,3 +55,26 @@ curl -s -X POST -H "Authorization: Bearer $ADMIN_TOKEN" \
   "https://localhost:<api-port>/admin/ingest" \
   -d '{"baseCurrency":"USD","asOf":"2026-06-20"}'
   -d '{"baseCurrency":"USD","asOf":"2026-06-20"}'
+  
+## Switching to Entra ID (Azure)
+
+The API is IdP-agnostic: it validates whatever `Authentication:Authority` and
+`Authentication:Audience` point at. `appsettings.Azure.json` re-points both at
+Entra ID, so running with `ASPNETCORE_ENVIRONMENT=Azure` swaps the provider
+with **no code change**:
+
+- `Authority` → `https://login.microsoftonline.com/<tenant-id>/v2.0`
+- `Audience`  → the API app-registration client id (or `api://<client-id>`)
+
+Two Entra specifics worth knowing:
+
+- **Roles still land in the `roles` claim.** Configure **app roles** named
+  `user`/`admin` on the API's app registration; Entra emits them in the same
+  `roles` claim the API already reads (`RoleClaimType = "roles"`), so the
+  `admin` policy works unchanged.
+- **`sub` is a pairwise identifier, not a GUID.** Entra's `sub` won't parse as
+  a `Guid`, so `HttpContextCurrentUser.UserId` is `null` for Entra callers —
+  which is the Phase 4 contract working as designed (a non-parseable `sub` is a
+  value, never a crash). `IsAuthenticated` stays `true`. (If a stable per-user
+  GUID is ever needed, Entra's `oid` claim carries it — a future, ADR-worthy
+  change to the adapter, not a Phase 11 one.)  
