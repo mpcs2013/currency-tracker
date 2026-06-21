@@ -139,10 +139,11 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseExceptionHandler(); // ← added in 6.4
+app.UseStatusCodePages(); // ← added in 11.7 (empty-body 401/403 -> problem+json via IProblemDetailsService)
 app.UseAuthentication(); // ← added in 11.4 (validates a presented token; rejects nothing yet)
 app.UseAuthorization(); // ← added in 11.4 (no RequireAuthorization until 11.7)
 app.MapDefaultEndpoints();
-app.MapWolverineEndpoints();
+app.MapWolverineEndpoints(opts => opts.RequireAuthorizeOnAll()); // ← 11.7: secure-by-default
 
 app.UseHttpsRedirection();
 
