@@ -123,7 +123,9 @@ builder
         };
     });
 
-builder.Services.AddAuthorization();
+builder.Services.AddAuthorization(options =>
+    options.AddPolicy("admin", policy => policy.RequireRole("admin"))
+);
 
 builder.Services.AddExceptionHandler<ValidationExceptionHandler>(); // ← added in 6.4
 builder.Services.AddExceptionHandler<NotFoundExceptionHandler>(); // ← added in 6.6

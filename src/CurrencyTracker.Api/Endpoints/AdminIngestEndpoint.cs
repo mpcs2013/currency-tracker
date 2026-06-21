@@ -1,4 +1,5 @@
 using CurrencyTracker.Application.Messaging;
+using Microsoft.AspNetCore.Authorization;
 using Wolverine;
 using Wolverine.Http;
 
@@ -27,6 +28,7 @@ public static class AdminIngestEndpoint
     /// <param name="bus">The Wolverine message bus.</param>
     /// <param name="cancellationToken">Request cancellation token.</param>
     /// <returns><c>202 Accepted</c> on success.</returns>
+    [Authorize(Policy = "admin")]
     [WolverinePost("/admin/ingest")]
     public static async Task<IResult> Ingest(
         IngestDailyRatesCommand command,
