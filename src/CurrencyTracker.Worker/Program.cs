@@ -4,9 +4,11 @@ using CurrencyTracker.Application.Abstractions.Providers;
 using CurrencyTracker.Infrastructure;
 using CurrencyTracker.ServiceDefaults;
 using JasperFx;
+using JasperFx.Resources; // AddResourceSetupOnStartup (see version note)
 using Wolverine;
 using Wolverine.EntityFrameworkCore;
 using Wolverine.FluentValidation;
+using Wolverine.Postgresql; // PersistMessagesWithPostgresql
 
 var builder = Host.CreateApplicationBuilder(args);
 
@@ -16,6 +18,14 @@ builder.AddServiceDefaults();
 // cache, clock — the same seam the Api uses (Phase 8). The handlers the Worker
 // dispatches resolve their ports through this.
 builder.AddInfrastructure();
+
+// The SAME connection string Phase 8 reads and Phase 7's AppHost injects.
+// Fail fast at boot if it's missing — the outbox cannot function without it.
+var currencyTrackerConnectionString =
+    builder.Configuration.GetConnectionString("currencytracker")
+    ?? throw new InvalidOperationException(
+        "Connection string 'currencytracker' is required for the Wolverine outbox/inbox."
+    );
 
 builder.UseWolverine(opts =>
 {
@@ -29,6 +39,9 @@ builder.UseWolverine(opts =>
     // exactly as on the HTTP side.
     opts.UseFluentValidation();
 
+    // Durable transactional inbox/outbox in the SAME database, "wolverine" schema.
+    opts.PersistMessagesWithPostgresql(currencyTrackerConnectionString, "wolverine");
+
     // Join Wolverine's messaging to the ApplicationDbContext transaction:
     // a handler's SaveChangesAsync and its outgoing/handled messages commit
     // together, or not at all.
@@ -38,6 +51,10 @@ builder.UseWolverine(opts =>
     // handler needs a [Transactional] attribute.
     opts.Policies.AutoApplyTransactions();
 
+    // Route the in-process cascade through the durable outbox/inbox, so a
+    // cascaded message is persisted before it's handled and survives a restart.
+    opts.Policies.UseDurableLocalQueues();
+
     // The ingestion handler depends on internal sealed adapters. Wolverine 6
     // cannot inline-construct internal types, and ServiceLocationPolicy.NotAllowed
     // (the default) forbids the fallback — opt these three ports into service
@@ -46,6 +63,14 @@ builder.UseWolverine(opts =>
     opts.CodeGeneration.AlwaysUseServiceLocationFor<IExchangeRateRepository>();
     opts.CodeGeneration.AlwaysUseServiceLocationFor<IUnitOfWork>();
 });
+
+// Dev convenience: create the wolverine_* tables on startup so a fresh clone
+// "just works". In Azure (Phase 14) the schema is provisioned by a deploy step,
+// not at runtime.
+if (builder.Environment.IsDevelopment())
+{
+    builder.Services.AddResourceSetupOnStartup();
+}
 
 //var host = builder.Build();
 //host.Run();

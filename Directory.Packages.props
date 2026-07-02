@@ -88,6 +88,8 @@
         <PackageVersion Include="WolverineFx.FluentValidation" Version="6.16.0" />
         <!-- added in 5.7 -->
         <PackageVersion Include="WolverineFx.Http" Version="6.16.0" />
+        <!-- Worker -->
+        <PackageVersion Include="WolverineFx.Postgresql" Version="6.16.0" />
         <!-- Api, Worker -->
         <PackageVersion Include="WolverineFx.RuntimeCompilation" Version="6.16.0" />
         <!-- Test -->
