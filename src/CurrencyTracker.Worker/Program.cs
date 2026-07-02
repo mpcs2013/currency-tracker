@@ -3,6 +3,7 @@ using CurrencyTracker.Application.Abstractions.Persistence;
 using CurrencyTracker.Application.Abstractions.Providers;
 using CurrencyTracker.Infrastructure;
 using CurrencyTracker.ServiceDefaults;
+using CurrencyTracker.Worker.Configuration;
 using JasperFx;
 using JasperFx.Resources; // AddResourceSetupOnStartup (see version note)
 using Wolverine;
@@ -26,6 +27,15 @@ var currencyTrackerConnectionString =
     ?? throw new InvalidOperationException(
         "Connection string 'currencytracker' is required for the Wolverine outbox/inbox."
     );
+
+builder
+    .Services.AddOptions<WorkerOptions>()
+    .Bind(builder.Configuration.GetSection(WorkerOptions.SectionName))
+    .ValidateOnStart();
+
+var ingestSchedule =
+    builder.Configuration[$"{WorkerOptions.SectionName}:{nameof(WorkerOptions.IngestSchedule)}"]
+    ?? "0 0 6 * * ?";
 
 builder.UseWolverine(opts =>
 {
