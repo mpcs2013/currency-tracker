@@ -4,8 +4,10 @@ using CurrencyTracker.Application.Abstractions.Providers;
 using CurrencyTracker.Infrastructure;
 using CurrencyTracker.ServiceDefaults;
 using CurrencyTracker.Worker.Configuration;
-using JasperFx;
+using CurrencyTracker.Worker.Scheduling;
+using JasperFx; // RunJasperFxCommands (from 12.1)
 using JasperFx.Resources; // AddResourceSetupOnStartup (see version note)
+using Quartz;
 using Wolverine;
 using Wolverine.EntityFrameworkCore;
 using Wolverine.FluentValidation;
@@ -37,8 +39,37 @@ var ingestSchedule =
     builder.Configuration[$"{WorkerOptions.SectionName}:{nameof(WorkerOptions.IngestSchedule)}"]
     ?? "0 0 6 * * ?";
 
+// + 12.4: Quartz drives the recurring cron. Quartz (3.3.2+) resolves the job
+// from DI per fire with a fresh scope, so the job can inject the scoped
+// IMessageBus. InTimeZone(Utc) makes "0 0 6 * * ?" mean 06:00 UTC regardless
+// of the host clock. Quartz uses its in-memory store here — the *schedule*
+// isn't persisted (it's re-declared on every startup), but the *work* is
+// durable because the job publishes onto Wolverine's Postgres outbox.
+var ingestJobKey = new JobKey("daily-ingestion");
+builder.Services.AddQuartz(q =>
+{
+    q.AddJob<DailyIngestionScheduleJob>(opts => opts.WithIdentity(ingestJobKey));
+    q.AddTrigger(opts =>
+        opts.ForJob(ingestJobKey)
+            .WithIdentity("daily-ingestion-trigger")
+            .WithCronSchedule(ingestSchedule, cron => cron.InTimeZone(TimeZoneInfo.Utc))
+    );
+});
+builder.Services.AddQuartzHostedService(opts => opts.WaitForJobsToComplete = true);
+
 builder.UseWolverine(opts =>
 {
+    // Local dev: run the durability subsystem in Solo mode so the outbox
+    // polling/relay agent starts immediately on this single node instead of
+    // waiting on leader election, which has known cold-start hiccups when you
+    // stop/start the host in a debugger. Production stays Balanced (the default)
+    // so agents distribute across replicas. (DurabilityMode is in the Wolverine
+    // namespace — already imported.)
+    if (builder.Environment.IsDevelopment())
+    {
+        opts.Durability.Mode = DurabilityMode.Solo;
+    }
+
     // Same convention discovery as the Api: scan the Application assembly for
     // *Handler types. The Worker is an IHost, not a WebApplication — there is
     // no MapWolverineEndpoints and no WolverineFx.Http here.

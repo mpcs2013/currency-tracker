@@ -72,6 +72,10 @@
         <PackageVersion Include="OpenTelemetry.Instrumentation.Http" Version="1.15.1" />
         <!-- Aspire -->
         <PackageVersion Include="OpenTelemetry.Instrumentation.Runtime" Version="1.15.1" />
+        <!-- Worker -->
+        <PackageVersion Include="Quartz" Version="3.18.2" />
+        <!-- Worker -->
+        <PackageVersion Include="Quartz.Extensions.Hosting" Version="3.18.2" />
         <!-- Api -->
         <PackageVersion Include="Scalar.AspNetCore" Version="2.16.8" />
         <!-- Test -->

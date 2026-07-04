@@ -16,10 +16,13 @@ from `IConfiguration` (`currencytracker`), never a literal.
 
 ## Scheduled ingestion
 
-`DailyIngestionScheduleJob` runs daily at 06:00 UTC (cron `Worker:IngestSchedule`,
-default `0 0 6 * * ?`). It publishes one `IngestDailyRatesCommand` per
-`Worker:IngestBases` entry for the current UTC date. The cron is evaluated on the
-host clock — the host runs in UTC.
+`DailyIngestionScheduleJob` (a Quartz `IJob`) runs daily at 06:00 UTC (cron
+`Worker:IngestSchedule`, default `0 0 6 * * ?`). Quartz owns the cadence; the job
+publishes one `IngestDailyRatesCommand` per `Worker:IngestBases` entry for the
+current UTC date onto the Wolverine outbox. The trigger is registered with
+`InTimeZone(TimeZoneInfo.Utc)`, so the cron means 06:00 UTC regardless of the host
+clock. Quartz uses its in-memory store — the schedule is re-declared each startup;
+work durability lives in the Wolverine outbox.
 
 ## What is NOT wired yet (Part 1)
 

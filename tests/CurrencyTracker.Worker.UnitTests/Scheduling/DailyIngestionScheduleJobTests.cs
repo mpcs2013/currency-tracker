@@ -3,6 +3,7 @@ using CurrencyTracker.Worker.Configuration;
 using CurrencyTracker.Worker.Scheduling;
 using Microsoft.Extensions.Options;
 using NSubstitute;
+using Quartz;
 using Wolverine;
 
 namespace CurrencyTracker.Worker.UnitTests.Scheduling;
@@ -10,7 +11,7 @@ namespace CurrencyTracker.Worker.UnitTests.Scheduling;
 /// <summary>
 /// Tests for <see cref="DailyIngestionScheduleJob"/>: it publishes one
 /// <see cref="IngestDailyRatesCommand"/> per configured base for the clock's
-/// current UTC date, and honours cancellation.
+/// current UTC date when Quartz fires it.
 /// </summary>
 public sealed class DailyIngestionScheduleJobTests
 {
@@ -23,16 +24,16 @@ public sealed class DailyIngestionScheduleJobTests
 
         var options = Options.Create(new WorkerOptions { IngestBases = bases });
 
-        return new DailyIngestionScheduleJob(clock, options);
+        return new DailyIngestionScheduleJob(bus, clock, options);
     }
 
     [Fact]
-    public async Task ExecuteAsync_publishes_one_command_per_base_for_today()
+    public async Task Execute_publishes_one_command_per_base_for_today()
     {
         var bus = Substitute.For<IMessageBus>();
         var sut = CreateSut(bus, "USD", "EUR");
 
-        await sut.ExecuteAsync(bus, CancellationToken.None);
+        await sut.Execute(Substitute.For<IJobExecutionContext>());
 
         await bus.Received(1)
             .PublishAsync(
@@ -49,16 +50,13 @@ public sealed class DailyIngestionScheduleJobTests
     }
 
     [Fact]
-    public async Task ExecuteAsync_honours_cancellation_before_publishing()
+    public async Task Execute_publishes_nothing_when_no_bases_configured()
     {
         var bus = Substitute.For<IMessageBus>();
-        var sut = CreateSut(bus, "USD");
-        using var cts = new CancellationTokenSource();
-        cts.Cancel();
+        var sut = CreateSut(bus);
 
-        var act = async () => await sut.ExecuteAsync(bus, cts.Token);
+        await sut.Execute(Substitute.For<IJobExecutionContext>());
 
-        await act.Should().ThrowAsync<OperationCanceledException>();
         await bus.DidNotReceiveWithAnyArgs().PublishAsync(default(IngestDailyRatesCommand)!);
     }
 }
