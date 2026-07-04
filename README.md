@@ -3,11 +3,16 @@
 A learning-by-doing currency tracker built solo with AI agents.
 Clean Architecture, .NET 10 LTS, Wolverine, Aspire, Postgres, Redis.
 
+
 ## Current phase
 
-**Phase 0 — Minimal repo bootstrap.** No production code yet. The build plan
-runs through Phase 16 (optional React frontend). Deploy is Phase 14; ignore
-anything deploy-related until then.
+**Phase 12 — Worker + scheduled ingestion + alerts + outbox.** The API is
+live and authenticated (auth landed in Phase 11). Phase 12 turns the Worker
+from a no-op host into a durable, scheduled message host: Part 1 adds the
+daily scheduled ingestion on a Postgres outbox/inbox; Part 2 adds the
+`ingest → evaluate → dispatch` alert cascade. The build plan runs through
+Phase 16 (optional React frontend). Deploy is Phase 14; ignore anything
+deploy-related until then.
 
 ## Running locally
 
@@ -35,9 +40,10 @@ To wipe local data and start clean:
 docker volume rm currencytracker-pgdata currencytracker-redisdata
 ```
 
-The Worker process starts but has no jobs to run yet — Phase 12 adds
-the scheduled rate-ingestion job. For now the Worker is a healthy
-no-op visible in the dashboard.
+The Worker runs the daily rate-ingestion job on a schedule (Quartz cron,
+06:00 UTC by default) and publishes through a Postgres-backed Wolverine
+outbox; you can watch a run in the dashboard's Traces tab. Set
+`Worker:IngestSchedule` to `*/30 * * * * ?` to see it fire every 30s.
 
 ### The Aspire dashboard
 
