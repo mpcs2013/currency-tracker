@@ -18,7 +18,13 @@ internal sealed class AlertConfiguration : IEntityTypeConfiguration<Alert>
         builder.HasKey(a => a.Id);
 
         builder.Property(a => a.RuleId).IsRequired();
-        builder.HasIndex(a => a.RuleId);
+        builder.Property(a => a.AsOfDate).IsRequired();
+
+        // Business identity: one alert per rule per observation date. The
+        // 12.5 evaluator's skip-query is the polite first layer; this index
+        // is the guarantee under concurrency. Its leftmost column also
+        // covers the RuleId-only lookups the old single index served.
+        builder.HasIndex(a => new { a.RuleId, a.AsOfDate }).IsUnique();
 
         builder.Property(a => a.PreviousRate).HasPrecision(18, 8).IsRequired();
         builder.Property(a => a.CurrentRate).HasPrecision(18, 8).IsRequired();

@@ -22,7 +22,15 @@ public sealed class EvaluateRulesHandlerTests
     // Single construction seam — 12.9 changes Alert.Create's signature and
     // this is the only line that will need to follow it.
     private static Alert CreateAlert() =>
-        Alert.Create(Guid.NewGuid(), previousRate: 0.90m, currentRate: 0.92m, firedAt: Now).Value;
+        Alert
+            .Create(
+                Guid.NewGuid(),
+                asOfDate: Today,
+                previousRate: 0.90m,
+                currentRate: 0.92m,
+                firedAt: Now
+            )
+            .Value;
 
     [Fact]
     public async Task Handle_TwoAlertsFired_CascadesOneAlertTriggeredPerAlertAndPersistsBoth()

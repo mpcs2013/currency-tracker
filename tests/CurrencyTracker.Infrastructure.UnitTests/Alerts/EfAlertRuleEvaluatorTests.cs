@@ -184,4 +184,35 @@ public sealed class EfAlertRuleEvaluatorTests
         // Assert
         fired.Should().ContainSingle(a => a.RuleId == eurRule.Id);
     }
+
+    [Fact]
+    public async Task EvaluateAsync_SameBaseAndDateEvaluatedTwice_SecondPassReturnsEmpty()
+    {
+        // Arrange — first pass fires and its alert is persisted (as 12.6's
+        // handler would); the second pass must skip the already-alerted rule.
+        await using var ctx = NewContext();
+        await SeedSnapshotAsync(ctx, Today.AddDays(-1), 0.90m);
+        await SeedSnapshotAsync(ctx, Today, 0.92m);
+        await SeedRuleAsync(ctx, thresholdPercent: 1.0m);
+        var evaluator = new EfAlertRuleEvaluator(ctx, FixedClock());
+
+        var firstPass = await evaluator.EvaluateAsync(
+            Usd,
+            Today,
+            TestContext.Current.CancellationToken
+        );
+        ctx.Alerts.AddRange(firstPass);
+        await ctx.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        // Act
+        var secondPass = await evaluator.EvaluateAsync(
+            Usd,
+            Today,
+            TestContext.Current.CancellationToken
+        );
+
+        // Assert
+        firstPass.Should().ContainSingle();
+        secondPass.Should().BeEmpty();
+    }
 }

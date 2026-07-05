@@ -57,11 +57,28 @@ internal sealed class EfAlertRuleEvaluator : IAlertRuleEvaluator
             .Where(r => r.Base == baseCurrency && r.Enabled)
             .ToListAsync(cancellationToken);
 
+        // Idempotency, layer one (ADR 0012): rules that already produced an
+        // alert for this observation date are skipped up front. Layer two —
+        // the unique (rule_id, as_of_date) index — catches the race this
+        // query cannot see (a concurrent evaluation's uncommitted row).
+        var ruleIds = rules.Select(r => r.Id).ToList();
+        var alreadyFired = await _dbContext
+            .Alerts.AsNoTracking()
+            .Where(a => a.AsOfDate == asOf && ruleIds.Contains(a.RuleId))
+            .Select(a => a.RuleId)
+            .ToListAsync(cancellationToken);
+        var alreadyFiredSet = alreadyFired.ToHashSet();
+
         var fired = new List<Alert>();
         foreach (var rule in rules)
         {
             // A rule whose quote isn't in one of the snapshots can't be
             // evaluated today — skip it, don't fail the batch.
+            if (alreadyFiredSet.Contains(rule.Id))
+            {
+                continue;
+            }
+
             if (
                 !previous.TryGetRate(rule.Quote, out var previousRate)
                 || !current.TryGetRate(rule.Quote, out var currentRate)
@@ -75,7 +92,13 @@ internal sealed class EfAlertRuleEvaluator : IAlertRuleEvaluator
                 continue;
             }
 
-            var alert = Alert.Create(rule.Id, previousRate.Rate, currentRate.Rate, _clock.UtcNow);
+            var alert = Alert.Create(
+                rule.Id,
+                asOf,
+                previousRate.Rate,
+                currentRate.Rate,
+                _clock.UtcNow
+            );
             if (alert.IsSuccess)
             {
                 fired.Add(alert.Value);

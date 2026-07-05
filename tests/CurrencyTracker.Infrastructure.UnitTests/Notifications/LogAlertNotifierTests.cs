@@ -16,6 +16,7 @@ public sealed class LogAlertNotifierTests
         Alert
             .Create(
                 Guid.NewGuid(),
+                asOfDate: new DateOnly(2026, 7, 4),
                 previousRate: 0.90m,
                 currentRate: 0.92m,
                 firedAt: new DateTimeOffset(2026, 7, 4, 6, 0, 0, TimeSpan.Zero)
