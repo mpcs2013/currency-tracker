@@ -1,4 +1,5 @@
 using CurrencyTracker.Application;
+using CurrencyTracker.Application.Abstractions.Alerts;
 using CurrencyTracker.Application.Abstractions.Persistence;
 using CurrencyTracker.Application.Abstractions.Providers;
 using CurrencyTracker.Infrastructure;
@@ -103,6 +104,8 @@ builder.UseWolverine(opts =>
     opts.CodeGeneration.AlwaysUseServiceLocationFor<IExchangeRateProvider>();
     opts.CodeGeneration.AlwaysUseServiceLocationFor<IExchangeRateRepository>();
     opts.CodeGeneration.AlwaysUseServiceLocationFor<IUnitOfWork>();
+    opts.CodeGeneration.AlwaysUseServiceLocationFor<IAlertRuleEvaluator>(); // + 12.6
+    opts.CodeGeneration.AlwaysUseServiceLocationFor<IAlertRepository>(); // + 12.6
 });
 
 // Dev convenience: create the wolverine_* tables on startup so a fresh clone

@@ -130,6 +130,7 @@ public static class DependencyInjection
         builder.Services.AddScoped<IExchangeRateProvider, FrankfurterExchangeRateProvider>();
         builder.Services.AddScoped<ICurrencyRepository, Persistence.EfCurrencyRepository>();
         builder.Services.AddScoped<IExchangeRateRepository, Persistence.EfExchangeRateRepository>();
+        builder.Services.AddScoped<IAlertRepository, Persistence.EfAlertRepository>();
         builder.Services.AddScoped<IUnitOfWork, Persistence.EfUnitOfWork>();
 
         return builder;
