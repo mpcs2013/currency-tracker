@@ -40,6 +40,7 @@ public sealed class RatesApiFixture : IAsyncLifetime
             );
             builder.UseSetting("Authentication:Audience", "currency-tracker-api");
             builder.UseTestJwtBearer(); // ← 11.7: trust TestJwt's signing key
+            builder.UseStubExchangeRateProvider(); // hermetic: no live ingest polluting the shared DB
         });
     }
 

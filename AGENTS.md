@@ -354,6 +354,10 @@ Every PR runs locally and in CI:
   on Windows / Mac when Docker Desktop is up; on GitHub Actions
   they're Linux-only because the `windows-latest` runner doesn't
   support Linux containers in the way Testcontainers needs.
+- A new `AlwaysUseServiceLocationFor<T>()` opt-in must land in EVERY host's
+  `UseWolverine` block (Api AND Worker) in the same PR — both hosts discover
+  the same Application handlers, so an opt-in added to one host alone fails
+  the other at startup with `InvalidServiceLocationException`.  
 
 ## How to update this file
 
