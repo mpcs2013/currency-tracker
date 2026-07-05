@@ -3,16 +3,21 @@ using CurrencyTracker.Application.Abstractions.Alerts;
 using CurrencyTracker.Application.Abstractions.Notifications;
 using CurrencyTracker.Application.Abstractions.Persistence;
 using CurrencyTracker.Application.Abstractions.Providers;
+using CurrencyTracker.Application.Exceptions; // NotFoundException
 using CurrencyTracker.Application.Messaging;
+using CurrencyTracker.Domain.Exceptions; // DomainException
 using CurrencyTracker.Infrastructure;
 using CurrencyTracker.ServiceDefaults;
 using CurrencyTracker.Worker.Configuration;
 using CurrencyTracker.Worker.Scheduling;
 using JasperFx; // RunJasperFxCommands (from 12.1)
 using JasperFx.Resources; // AddResourceSetupOnStartup (see version note)
+using Microsoft.EntityFrameworkCore; // DbUpdateException
+using Npgsql; // NpgsqlException (transitive via EF provider)
 using Quartz;
 using Wolverine;
 using Wolverine.EntityFrameworkCore;
+using Wolverine.ErrorHandling; // OnException / RetryWithCooldown / ScheduleRetry
 using Wolverine.FluentValidation;
 using Wolverine.Postgresql; // PersistMessagesWithPostgresql
 
@@ -110,6 +115,48 @@ builder.UseWolverine(opts =>
     // Route the in-process cascade through the durable outbox/inbox, so a
     // cascaded message is persisted before it's handled and survives a restart.
     opts.Policies.UseDurableLocalQueues();
+
+    // + 12.12: per-exception-class failure policies. Order matters — first
+    // matching policy wins, so the most specific classifications come first.
+
+    // Deterministic pipeline fault (12.8: the alert row is gone). Retrying
+    // cannot help; park it for a human, envelope intact.
+    opts.OnException<NotFoundException>().MoveToErrorQueue();
+
+    // External-provider fault (ingestion handler throws DomainException when
+    // Frankfurter fails). Real backoff, DURABLY scheduled via the outbox —
+    // the retry survives a Worker restart mid-wait. Then dead-letter.
+    opts.OnException<DomainException>()
+        .ScheduleRetry(TimeSpan.FromMinutes(5), TimeSpan.FromMinutes(15))
+        .Then.MoveToErrorQueue();
+
+    // Transient infrastructure fault: cheap immediate-ish retries, then
+    // dead-letter.
+    opts.OnException<NpgsqlException>()
+        .RetryWithCooldown(
+            TimeSpan.FromMilliseconds(100),
+            TimeSpan.FromMilliseconds(250),
+            TimeSpan.FromMilliseconds(500)
+        )
+        .Then.MoveToErrorQueue();
+
+    // Transient infrastructure fault, the application's EF writes: EF wraps
+    // every SaveChanges-path database failure in DbUpdateException — the raw
+    // NpgsqlException never escapes SaveChangesAsync, so the policy above
+    // never sees it. Retry is safe AND convergent here: re-execution re-runs
+    // the whole handler, so a 12.9 unique-index race resolves itself — the
+    // evaluator's skip-query sees the committed winner and returns empty.
+    opts.OnException<DbUpdateException>()
+        .RetryWithCooldown(
+            TimeSpan.FromMilliseconds(100),
+            TimeSpan.FromMilliseconds(250),
+            TimeSpan.FromMilliseconds(500)
+        )
+        .Then.MoveToErrorQueue();
+
+    // + 12.12: one Debug line per handling attempt, so a poison message's
+    // retry history reads straight off the logs (and the 12.11 trace).
+    opts.Policies.LogMessageStarting(LogLevel.Debug);
 
     // The ingestion handler depends on internal sealed adapters. Wolverine 6
     // cannot inline-construct internal types, and ServiceLocationPolicy.NotAllowed

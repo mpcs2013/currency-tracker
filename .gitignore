@@ -482,3 +482,4 @@ $RECYCLE.BIN/
 *.swp
 /.claude
 *.json
+/.github/workflows/claude-code-review.yml

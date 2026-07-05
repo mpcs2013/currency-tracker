@@ -24,13 +24,45 @@ current UTC date onto the Wolverine outbox. The trigger is registered with
 clock. Quartz uses its in-memory store — the schedule is re-declared each startup;
 work durability lives in the Wolverine outbox.
 
-## What is NOT wired yet (Part 1)
+## The alert pipeline
 
-The ingestion handler returns the cascading `DailyRatesIngested` event. In
-Part 1 nobody consumes it, so Wolverine logs "no handler" and drops it — this is
-expected. Part 2 adds `EvaluateRulesHandler` (consumes `DailyRatesIngested`),
-`DispatchAlertHandler`, the `(ruleId, date)` idempotency, the pipeline test, the
-end-to-end trace, and the retry/dead-letter policy.
+Ingestion cascades through three Application handlers, all durable on the
+Worker's Postgres outbox ("wolverine" schema):
+
+    IngestDailyRatesCommand -> IngestDailyRatesHandler
+        -> DailyRatesIngested -> EvaluateRulesHandler   (persists Alerts)
+            -> AlertTriggered -> DispatchAlertHandler   (IAlertNotifier)
+
+Alert identity is (rule_id, as_of_date), enforced by a unique index
+(ADR 0012): the evaluator skips already-alerted rules, and the index
+catches concurrent races. Re-ingesting a day is safe end-to-end — the
+inbox dedupes replayed ENVELOPES, the business key dedupes replayed
+MEANING. The delivery channel is LogAlertNotifier (one structured
+Information line per alert, EventId 1200); a real transport replaces the
+adapter, not the pipeline.
+
+## Failure handling
+
+Worker-only policies (the Api's HTTP path keeps its ProblemDetails
+contract), first match wins:
+
+| Exception          | Policy                                   | Rationale                       |
+| ------------------ | ---------------------------------------- | ------------------------------- |
+| NotFoundException  | dead-letter immediately                  | deterministic; retry is waste       |
+| DomainException    | scheduled retry 5 min, 15 min, then DL   | external provider; slow backoff     |
+| NpgsqlException    | cooldown retry 100/250/500 ms, then DL   | transient (Wolverine's ADO ops)     |
+| DbUpdateException  | cooldown retry 100/250/500 ms, then DL   | transient (app's EF writes; EF wraps the raw NpgsqlException) |
+
+Dead letters land in wolverine.wolverine_dead_letters with the full
+envelope and exception text:
+
+    select id, message_type, exception_type, exception_message
+    from wolverine.wolverine_dead_letters;
+
+Fix the cause, then replay (JasperFx exposes dead-letter replay via the
+command line / stored procedures — see the Wolverine dead-letter docs for
+the pinned version). `LogMessageStarting` (Debug) prints one line per
+attempt, so a message's retry history reads straight off the logs.
 
 ## Verify
 
