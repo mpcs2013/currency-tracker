@@ -8,7 +8,6 @@ using CurrencyTracker.Application.Messaging;
 using CurrencyTracker.Infrastructure;
 using CurrencyTracker.ServiceDefaults;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using Scalar.AspNetCore;
 using Wolverine;
@@ -22,10 +21,13 @@ builder.AddServiceDefaults();
 // ServiceDefaults wires the generic OTel instrumentation but can't see the
 // app's telemetry scope. Register the ingestion meter + source here so the
 // rates.ingested counter and the ingest.daily_rates span are exported.
+// After (12.11):
 builder
     .Services.AddOpenTelemetry()
-    .WithMetrics(metrics => metrics.AddMeter(IngestionTelemetry.SourceName))
-    .WithTracing(tracing => tracing.AddSource(IngestionTelemetry.SourceName));
+    .WithMetrics(metrics => metrics.AddMeter(IngestionTelemetry.SourceName).AddMeter("Wolverine*"))
+    .WithTracing(tracing =>
+        tracing.AddSource(IngestionTelemetry.SourceName).AddSource("Wolverine")
+    );
 
 builder.AddInfrastructure();
 
