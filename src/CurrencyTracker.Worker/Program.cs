@@ -3,6 +3,7 @@ using CurrencyTracker.Application.Abstractions.Alerts;
 using CurrencyTracker.Application.Abstractions.Notifications;
 using CurrencyTracker.Application.Abstractions.Persistence;
 using CurrencyTracker.Application.Abstractions.Providers;
+using CurrencyTracker.Application.Messaging;
 using CurrencyTracker.Infrastructure;
 using CurrencyTracker.ServiceDefaults;
 using CurrencyTracker.Worker.Configuration;
@@ -18,6 +19,18 @@ using Wolverine.Postgresql; // PersistMessagesWithPostgresql
 var builder = Host.CreateApplicationBuilder(args);
 
 builder.AddServiceDefaults();
+
+// + 12.11: subscribe the Worker to the app's ingestion telemetry (Phase 9.8)
+// and to Wolverine's self-instrumentation. Wolverine's tracing source is
+// named "Wolverine"; its meter is per-application ("Wolverine:<app>"), hence
+// the wildcard. Without these AddSource/AddMeter calls the spans are emitted
+// and silently discarded — pay-for-play.
+builder
+    .Services.AddOpenTelemetry()
+    .WithMetrics(metrics => metrics.AddMeter(IngestionTelemetry.SourceName).AddMeter("Wolverine*"))
+    .WithTracing(tracing =>
+        tracing.AddSource(IngestionTelemetry.SourceName).AddSource("Wolverine")
+    );
 
 // Registers ApplicationDbContext + the EF repositories, Frankfurter provider,
 // cache, clock — the same seam the Api uses (Phase 8). The handlers the Worker
