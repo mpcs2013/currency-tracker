@@ -104,6 +104,36 @@ exception because provider failures are expected during normal operation
 forces call-sites to handle both success and failure paths explicitly and avoids
 the overhead of unwinding the stack for anticipated error cases.
 
+## `IAlertRepository`
+
+**Purpose:** Persists fired `Alert` records and loads them by identity so the
+dispatch stage operates on domain objects rather than EF Core entities.
+
+**Source:** `src/CurrencyTracker.Application/Abstractions/Persistence/IAlertRepository.cs`
+
+​```csharp
+using CurrencyTracker.Domain.Alerts;
+
+namespace CurrencyTracker.Application.Abstractions.Persistence;
+
+public interface IAlertRepository
+{
+    Task<Alert?> GetByIdAsync(Guid id, CancellationToken cancellationToken);
+
+    Task AddAsync(Alert alert, CancellationToken cancellationToken);
+}
+​```
+
+**Adapter:** `src/CurrencyTracker.Infrastructure/Persistence/EfAlertRepository.cs` (Phase 12)  
+**Fake:** `tests/CurrencyTracker.Application.UnitTests/Fakes/InMemoryAlertRepository.cs`
+
+Added in Phase 12 (issue 12.6) and deliberately tiny: alerts are immutable
+facts, so the surface is "store one" and "load one by id" — the latter is
+`DispatchAlertHandler`'s lookup. `AddAsync` tracks rather than writes,
+matching `ICurrencyRepository`'s convention that the caller controls the
+flush boundary via `IUnitOfWork.SaveChangesAsync`. Queries over alerts are a
+later phase's read-model concern.
+
 ## `IAlertNotifier`
 
 **Purpose:** Dispatches a fired `Alert` to whatever delivery channel the
@@ -131,6 +161,42 @@ one method regardless of how many channels are supported. The return type is
 `Task` rather than `Task<bool>` because delivery confirmation is asynchronous
 for most channels and a synchronous boolean would misrepresent semantics.
 Bounce and delivery-receipt tracking is deferred to Phase 12's outbox.
+
+## `IAlertRuleEvaluator`
+
+**Purpose:** Evaluates every enabled `AlertRule` for a base currency against
+the rate movement between the previous day's snapshot and the observation
+day's snapshot, returning one constructed `Alert` per rule that fired.
+
+**Source:** `src/CurrencyTracker.Application/Abstractions/Alerts/IAlertRuleEvaluator.cs`
+
+​```csharp
+using CurrencyTracker.Domain.Alerts;
+using CurrencyTracker.Domain.Currencies;
+
+namespace CurrencyTracker.Application.Abstractions.Alerts;
+
+public interface IAlertRuleEvaluator
+{
+    Task<IReadOnlyList<Alert>> EvaluateAsync(
+        CurrencyCode baseCurrency,
+        DateOnly asOf,
+        CancellationToken cancellationToken
+    );
+}
+​```
+
+**Adapter:** `src/CurrencyTracker.Infrastructure/Alerts/EfAlertRuleEvaluator.cs` (Phase 12)  
+**Fake:** `tests/CurrencyTracker.Application.UnitTests/Fakes/InMemoryAlertRuleEvaluator.cs`
+
+Unlike the Phase 4 ports, this one arrived with its adapter (Phase 12,
+issue 12.5) because it exists to serve the alert pipeline. The port answers
+"which rules fired?" — an Application question — while snapshot fetching is
+the adapter's concern. It returns constructed `Alert`s rather than rule ids
+because `AlertRule.ShouldTrigger` owns the threshold comparison and
+`Alert.Create` owns the invariants; the adapter fetches and delegates, never
+duplicating either. A missing snapshot (the first ingestion day) yields an
+empty list, not an error.
 
 ## `ICurrentUser`
 

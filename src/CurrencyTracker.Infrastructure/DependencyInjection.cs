@@ -1,5 +1,6 @@
 using CurrencyTracker.Application.Abstractions.Alerts;
 using CurrencyTracker.Application.Abstractions.Caching;
+using CurrencyTracker.Application.Abstractions.Notifications;
 using CurrencyTracker.Application.Abstractions.Persistence;
 using CurrencyTracker.Application.Abstractions.Providers;
 using CurrencyTracker.Application.Abstractions.Security;
@@ -125,6 +126,7 @@ public static class DependencyInjection
 
         builder.Services.AddScoped<ICurrentUser, Security.HttpContextCurrentUser>();
         builder.Services.AddSingleton<IDateTimeProvider, SystemDateTimeProvider>();
+        builder.Services.AddSingleton<IAlertNotifier, Notifications.LogAlertNotifier>();
 
         builder.Services.AddScoped<IAlertRuleEvaluator, Alerts.EfAlertRuleEvaluator>();
         builder.Services.AddScoped<IExchangeRateProvider, FrankfurterExchangeRateProvider>();
