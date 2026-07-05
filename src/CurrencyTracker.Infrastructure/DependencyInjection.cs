@@ -1,3 +1,4 @@
+using CurrencyTracker.Application.Abstractions.Alerts;
 using CurrencyTracker.Application.Abstractions.Caching;
 using CurrencyTracker.Application.Abstractions.Persistence;
 using CurrencyTracker.Application.Abstractions.Providers;
@@ -121,9 +122,11 @@ public static class DependencyInjection
         // the adapter is internal, so it can only be registered here (ADR 0006).
         // In the Worker (no HttpContext) this resolves to an anonymous view.
         builder.Services.AddHttpContextAccessor();
-        builder.Services.AddScoped<ICurrentUser, Security.HttpContextCurrentUser>();
 
+        builder.Services.AddScoped<ICurrentUser, Security.HttpContextCurrentUser>();
         builder.Services.AddSingleton<IDateTimeProvider, SystemDateTimeProvider>();
+
+        builder.Services.AddScoped<IAlertRuleEvaluator, Alerts.EfAlertRuleEvaluator>();
         builder.Services.AddScoped<IExchangeRateProvider, FrankfurterExchangeRateProvider>();
         builder.Services.AddScoped<ICurrencyRepository, Persistence.EfCurrencyRepository>();
         builder.Services.AddScoped<IExchangeRateRepository, Persistence.EfExchangeRateRepository>();
