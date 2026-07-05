@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using CurrencyTracker.Api.ErrorHandling;
 using CurrencyTracker.Application;
+using CurrencyTracker.Application.Abstractions.Notifications;
 using CurrencyTracker.Application.Abstractions.Persistence;
 using CurrencyTracker.Application.Abstractions.Providers;
 using CurrencyTracker.Application.Messaging;
@@ -48,6 +49,7 @@ builder.UseWolverine(opts =>
     opts.CodeGeneration.AlwaysUseServiceLocationFor<IExchangeRateProvider>();
     opts.CodeGeneration.AlwaysUseServiceLocationFor<IExchangeRateRepository>();
     opts.CodeGeneration.AlwaysUseServiceLocationFor<IUnitOfWork>();
+    opts.CodeGeneration.AlwaysUseServiceLocationFor<IAlertNotifier>(); // + 12.8
 });
 
 builder.Services.AddOpenApi();
