@@ -19,5 +19,12 @@
         <PackageReference Include="xunit.v3" />
         <PackageReference Include="xunit.runner.visualstudio" />
         <PackageReference Include="WireMock.Net" />
+        <PackageReference Include="WolverineFx.EntityFrameworkCore" />
+        <PackageReference Include="WolverineFx.FluentValidation" />
+        <PackageReference Include="WolverineFx.Postgresql" />
+        <!-- Registers the Roslyn runtime code generator so the pipeline harness's
+             Wolverine host (TypeLoadMode.Dynamic) can compile handlers at runtime,
+             exactly as the Worker does. Without it the host fails to start. -->
+        <PackageReference Include="WolverineFx.RuntimeCompilation" />
     </ItemGroup>
 </Project>
