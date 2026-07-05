@@ -13,7 +13,8 @@ public sealed class IAlertNotifierTests
 {
     private static readonly DateTimeOffset FiredAt = new(2026, 5, 24, 0, 0, 0, TimeSpan.Zero);
 
-    private static Alert MakeAlert() => Alert.Create(Guid.NewGuid(), 1.00m, 1.05m, FiredAt).Value;
+    private static Alert MakeAlert() =>
+        Alert.Create(Guid.NewGuid(), new DateOnly(2026, 5, 24), 1.00m, 1.05m, FiredAt).Value;
 
     [Fact]
     public async Task SendAsync_records_single_alert()
