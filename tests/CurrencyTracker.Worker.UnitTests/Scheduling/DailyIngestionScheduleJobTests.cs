@@ -38,13 +38,13 @@ public sealed class DailyIngestionScheduleJobTests
         await bus.Received(1)
             .PublishAsync(
                 Arg.Is<IngestDailyRatesCommand>(c =>
-                    c.BaseCurrency == "USD" && c.AsOf == new DateOnly(2026, 6, 21)
+                    c != null && c.BaseCurrency == "USD" && c.AsOf == new DateOnly(2026, 6, 21)
                 )
             );
         await bus.Received(1)
             .PublishAsync(
                 Arg.Is<IngestDailyRatesCommand>(c =>
-                    c.BaseCurrency == "EUR" && c.AsOf == new DateOnly(2026, 6, 21)
+                    c != null && c.BaseCurrency == "EUR" && c.AsOf == new DateOnly(2026, 6, 21)
                 )
             );
     }
