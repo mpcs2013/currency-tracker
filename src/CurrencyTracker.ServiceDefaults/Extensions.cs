@@ -1,3 +1,4 @@
+using CurrencyTracker.ServiceDefaults.Logging;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Configuration;
@@ -68,6 +69,7 @@ public static class Extensions
                     .Enrich.FromLogContext()
                     .Enrich.WithMachineName() // + 13.2
                     .Enrich.WithEnvironmentName() // + 13.2
+                    .Enrich.With(new RedactingEnricher()) // + 13.3: last, sees final values
                     .WriteTo.Console(new CompactJsonFormatter());
 
                 // Dev log server (13.7). Presence of the connection string

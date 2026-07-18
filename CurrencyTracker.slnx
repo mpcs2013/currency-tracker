@@ -21,6 +21,7 @@
     <Project Path="src/CurrencyTracker.Worker/CurrencyTracker.Worker.csproj" />
   </Folder>
   <Folder Name="/tests/">
+    <Project Path="tests/CurrencyTracker.ServiceDefaults.UnitTests/CurrencyTracker.ServiceDefaults.UnitTests.csproj" />
     <Project
       Path="tests/CurrencyTracker.Worker.UnitTests/CurrencyTracker.Worker.UnitTests.csproj"
       Id="3459b450-7576-4199-9113-1dafbb5a4f71"
