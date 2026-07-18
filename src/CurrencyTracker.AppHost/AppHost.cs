@@ -50,6 +50,21 @@ var keycloak = builder
 //.WithEnvironment("KC_HOSTNAME_STRICT_HTTPS", "false")
 ;
 
+// Seq log server (13.7, dev-only — ExcludeFromManifest keeps it out of
+// any deployment; Azure logs travel the OTLP sink instead, ADR 0013).
+// The resource name "seq" is a contract: WithReference injects
+// ConnectionStrings__seq, the key ServiceDefaults' conditional Serilog
+// sink reads. ACCEPT_EULA is Seq's container license gate; the image
+// tag is pinned per ADR 0009; the named volume + persistent lifetime
+// keep log history (and Seq's slow cold-start) across AppHost restarts.
+var seq = builder
+    .AddSeq("seq")
+    .WithImageTag("2025.2") // ← confirm current stable on hub.docker.com/r/datalust/seq
+    .WithDataVolume("currencytracker-seqdata")
+    .WithLifetime(ContainerLifetime.Persistent)
+    .WithEnvironment("ACCEPT_EULA", "Y")
+    .ExcludeFromManifest();
+
 builder
     .AddProject<Projects.CurrencyTracker_Api>("api")
     .WithReference(currencytrackerDb)
@@ -58,6 +73,7 @@ builder
     .WaitFor(cache)
     .WithReference(keycloak) // ← 11.3
     .WaitFor(keycloak) // ← 11.3
+    .WithReference(seq) // ← 13.7: injects ConnectionStrings__seq; no WaitFor — logging never gates startup
     .WithEnvironment(
         "Authentication__Authority",
         ReferenceExpression.Create(
@@ -71,6 +87,7 @@ builder
     .WithReference(currencytrackerDb)
     .WaitFor(currencytrackerDb)
     .WithReference(cache)
-    .WaitFor(cache);
+    .WaitFor(cache)
+    .WithReference(seq); // ← 13.7
 
 builder.Build().Run();

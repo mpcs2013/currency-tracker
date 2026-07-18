@@ -48,3 +48,6 @@ Every log event flows through one pipeline with enrichment (13.2) and
 redaction (13.3) applied uniformly across hosts. The Aspire dashboard's
 structured-log view is fed by the OTLP sink rather than the MEL
 provider. Serilog family upgrades are a props-file + ADR concern.
+
+Seq runs as a dev-only Aspire resource (13.7), excluded from the
+deployment manifest; production log search is the OTLP path's concern.
