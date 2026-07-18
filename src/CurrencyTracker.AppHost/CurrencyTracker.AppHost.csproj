@@ -14,6 +14,7 @@
         <PackageReference Include="Aspire.Hosting.Keycloak" />
         <PackageReference Include="Aspire.Hosting.PostgreSQL" />
         <PackageReference Include="Aspire.Hosting.Redis" />
+        <PackageReference Include="Aspire.Hosting.Seq" />
         <PackageReference Include="MessagePack" />
     </ItemGroup>
 

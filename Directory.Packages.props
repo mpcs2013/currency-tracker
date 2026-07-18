@@ -14,6 +14,8 @@
         <PackageVersion Include="Aspire.Hosting.PostgreSQL" Version="13.4.6" />
         <!-- Aspire-->
         <PackageVersion Include="Aspire.Hosting.Redis" Version="13.4.6" />
+        <!-- Aspire (13.7) -->
+        <PackageVersion Include="Aspire.Hosting.Seq" Version="13.4.6" />
         <!-- Test -->
         <PackageVersion Include="Aspire.Hosting.Testing" Version="13.4.6" />
         <!-- Test -->
