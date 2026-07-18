@@ -32,6 +32,11 @@ public static class DispatchAlertHandler
         CancellationToken cancellationToken
     )
     {
+        // + 13.4: terminal-stage span. GUID tags are identity, not PII.
+        using var activity = AlertTelemetry.ActivitySource.StartActivity("alerts.dispatch");
+        activity?.SetTag("alerts.alert_id", @event.AlertId);
+        activity?.SetTag("alerts.rule_id", @event.RuleId);
+
         var alert =
             await alerts.GetByIdAsync(@event.AlertId, cancellationToken)
             ?? throw new NotFoundException("Alert", @event.AlertId.ToString());

@@ -35,7 +35,15 @@ public static class EvaluateRulesHandler
         CancellationToken cancellationToken
     )
     {
+        // + 13.4: business-stage span, parented to Wolverine's message
+        // span via Activity.Current. Tags carry identity/shape only —
+        // never rate values or rule bodies (9.11 telemetry rule).
+        using var activity = AlertTelemetry.ActivitySource.StartActivity("alerts.evaluate_rules");
+        activity?.SetTag("alerts.base", @event.Base.Value);
+        activity?.SetTag("alerts.as_of", @event.AsOf.ToString("yyyy-MM-dd"));
+
         var fired = await evaluator.EvaluateAsync(@event.Base, @event.AsOf, cancellationToken);
+        activity?.SetTag("alerts.fired_count", fired.Count);
 
         var messages = new OutgoingMessages();
         foreach (var alert in fired)
