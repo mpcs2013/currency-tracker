@@ -1,3 +1,4 @@
+using System.Diagnostics.Metrics;
 using CurrencyTracker.Application.Messaging;
 using CurrencyTracker.Application.UnitTests.Fakes;
 using CurrencyTracker.Domain.Alerts;
@@ -88,5 +89,46 @@ public sealed class EvaluateRulesHandlerTests
         messages.Should().BeEmpty();
         repository.Alerts.Should().BeEmpty();
         unitOfWork.SaveCount.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task Handle_TwoAlertsFired_IncrementsAlertsTriggeredByTwo()
+    {
+        // Arrange
+        var evaluator = new InMemoryAlertRuleEvaluator
+        {
+            AlertsToReturn = [CreateAlert(), CreateAlert()],
+        };
+        var repository = new InMemoryAlertRepository();
+        var unitOfWork = new InMemoryUnitOfWork();
+
+        long observed = 0;
+        using var listener = new MeterListener();
+        listener.InstrumentPublished = (instrument, l) =>
+        {
+            if (
+                instrument.Meter.Name == AlertTelemetry.SourceName
+                && instrument.Name == "alerts.triggered"
+            )
+            {
+                l.EnableMeasurementEvents(instrument);
+            }
+        };
+        listener.SetMeasurementEventCallback<long>(
+            (_, measurement, _, _) => Interlocked.Add(ref observed, measurement)
+        );
+        listener.Start();
+
+        // Act
+        await EvaluateRulesHandler.Handle(
+            Event,
+            evaluator,
+            repository,
+            unitOfWork,
+            TestContext.Current.CancellationToken
+        );
+
+        // Assert
+        Interlocked.Read(ref observed).Should().Be(2);
     }
 }

@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Diagnostics.Metrics;
 
 namespace CurrencyTracker.Application.Messaging;
 
@@ -18,4 +19,17 @@ public static class AlertTelemetry
 
     /// <summary>Activity source emitting the alert-stage spans.</summary>
     public static readonly ActivitySource ActivitySource = new(SourceName);
+
+    private static readonly Meter Meter = new(SourceName);
+
+    /// <summary>
+    /// Counter incremented by the number of alerts durably persisted by
+    /// an evaluation pass — after the commit, never before (a rolled-back
+    /// alert was not triggered).
+    /// </summary>
+    public static readonly Counter<long> AlertsTriggered = Meter.CreateCounter<long>(
+        "alerts.triggered",
+        unit: "{alert}",
+        description: "Number of alerts persisted and handed to the outbox for dispatch."
+    );
 }

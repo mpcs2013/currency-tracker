@@ -66,6 +66,10 @@ public static class EvaluateRulesHandler
         if (fired.Count > 0)
         {
             await unitOfWork.SaveChangesAsync(cancellationToken);
+
+            // + 13.5: count COMMITTED alerts. Before the commit, a failed
+            // save (and 12.12's retry re-execution) would double-count.
+            AlertTelemetry.AlertsTriggered.Add(fired.Count);
         }
 
         return messages;

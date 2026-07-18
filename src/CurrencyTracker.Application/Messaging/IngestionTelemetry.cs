@@ -30,4 +30,16 @@ public static class IngestionTelemetry
         unit: "{rate}",
         description: "Number of exchange rates persisted by daily ingestion."
     );
+
+    /// <summary>
+    /// Counter incremented once per failed ingestion attempt, tagged
+    /// with the bounded <c>error.code</c> failure vocabulary. Composes
+    /// with the 12.12 retry policies: retried attempts each count, so
+    /// failures minus dead-letters reads as retry-recovered attempts.
+    /// </summary>
+    public static readonly Counter<long> IngestionFailures = Meter.CreateCounter<long>(
+        "ingestion.failures",
+        unit: "{failure}",
+        description: "Number of failed daily-ingestion attempts, by error code."
+    );
 }
