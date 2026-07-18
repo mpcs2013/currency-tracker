@@ -66,6 +66,14 @@ public static class IngestDailyRatesHandler
 
         if (!snapshot.IsSuccess)
         {
+            // + 13.5: count the failed attempt before control leaves for
+            // the exception pipeline. error.code is the closed Phase 4
+            // failure vocabulary — bounded tag cardinality by design.
+            IngestionTelemetry.IngestionFailures.Add(
+                1,
+                new KeyValuePair<string, object?>("error.code", snapshot.Error.Code)
+            );
+
             // No try/catch building an HTTP response — throw and let the
             // IExceptionHandler pipeline translate it to ProblemDetails.
             throw new DomainException(
