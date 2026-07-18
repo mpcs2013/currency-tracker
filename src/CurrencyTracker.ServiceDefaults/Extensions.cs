@@ -66,6 +66,8 @@ public static class Extensions
                     .ReadFrom.Configuration(builder.Configuration)
                     .ReadFrom.Services(services)
                     .Enrich.FromLogContext()
+                    .Enrich.WithMachineName() // + 13.2
+                    .Enrich.WithEnvironmentName() // + 13.2
                     .WriteTo.Console(new CompactJsonFormatter());
 
                 // Dev log server (13.7). Presence of the connection string
