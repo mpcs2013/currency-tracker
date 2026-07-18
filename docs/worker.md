@@ -64,6 +64,34 @@ command line / stored procedures — see the Wolverine dead-letter docs for
 the pinned version). `LogMessageStarting` (Debug) prints one line per
 attempt, so a message's retry history reads straight off the logs.
 
+## Telemetry
+
+All app telemetry rides the shared `CurrencyTracker` instrumentation
+scope, registered in both composition roots (9.10 / 12.11). Names are
+contracts — dashboards and alerts key off the exact strings.
+
+Spans (one per pipeline stage; nested in Wolverine's per-message spans):
+
+| Span                   | Stage    | Tags                                    |
+| ---------------------- | -------- | --------------------------------------- |
+| ingest.daily_rates     | ingest   | ingest.base, ingest.as_of               |
+| alerts.evaluate_rules  | evaluate | alerts.base, alerts.as_of, alerts.fired_count |
+| alerts.dispatch        | dispatch | alerts.alert_id, alerts.rule_id         |
+
+Counters:
+
+| Counter            | Increments when                                   |
+| ------------------ | ------------------------------------------------- |
+| rates.ingested     | after a committed ingest, by rates persisted      |
+| ingestion.failures | per failed ingest attempt, tagged error.code      |
+| alerts.triggered   | after a committed evaluation, by alerts persisted |
+| cache.hit          | cache adapter served a value without a source read |
+| cache.miss         | cache adapter fell through to the source           |
+
+`ingestion.failures` counts attempts, so under the retry policies a
+message that retries and dead-letters counts once per attempt; failures
+minus dead-letter rows reads as retry-recovered attempts.
+
 ## Verify
 
 - `dotnet run --project src/CurrencyTracker.AppHost` → dashboard shows `worker`
