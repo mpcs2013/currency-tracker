@@ -140,6 +140,8 @@ builder
 
 builder.Services.AddApiRateLimiting(builder.Configuration); // ← 13.9
 
+builder.Services.AddSecurityHeaders(builder.Configuration); // ← 13.10
+
 builder.Services.AddAuthorization(options =>
     options.AddPolicy("admin", policy => policy.RequireRole("admin"))
 );
@@ -150,6 +152,13 @@ builder.Services.AddExceptionHandler<DomainExceptionHandler>(); // ← added in 
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>(); // ← added in 6.4
 
 var app = builder.Build();
+
+app.UseSecurityHeaders(); // ← 13.10: first, so headers land on every response (incl. short-circuits)
+
+if (!app.Environment.IsDevelopment())
+{
+    app.UseHsts(); // ← 13.10: HSTS in non-dev only (browser-facing HTTPS)
+}
 
 if (app.Environment.IsDevelopment())
 {
