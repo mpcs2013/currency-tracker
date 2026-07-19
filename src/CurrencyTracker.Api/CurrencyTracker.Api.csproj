@@ -24,6 +24,10 @@
     </ItemGroup>
 
     <ItemGroup>
+        <InternalsVisibleTo Include="CurrencyTracker.Api.IntegrationTests" />
+    </ItemGroup>
+
+    <ItemGroup>
         <Folder Include="Exceptions\" />
     </ItemGroup>
 </Project>

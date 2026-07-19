@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using CurrencyTracker.Api.ErrorHandling;
+using CurrencyTracker.Api.Health;
 using CurrencyTracker.Application;
 using CurrencyTracker.Application.Abstractions.Notifications;
 using CurrencyTracker.Application.Abstractions.Persistence;
@@ -8,6 +9,7 @@ using CurrencyTracker.Application.Messaging;
 using CurrencyTracker.Infrastructure;
 using CurrencyTracker.ServiceDefaults;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks; // HealthCheckOptions
 using Microsoft.IdentityModel.Tokens;
 using Scalar.AspNetCore;
 using Wolverine;
@@ -53,6 +55,8 @@ builder.UseWolverine(opts =>
     opts.CodeGeneration.AlwaysUseServiceLocationFor<IUnitOfWork>();
     opts.CodeGeneration.AlwaysUseServiceLocationFor<IAlertNotifier>(); // + 12.8
 });
+
+builder.AddApiReadinessChecks(); // ← 13.8: postgres + redis readiness checks (tag "ready")
 
 builder.Services.AddOpenApi();
 builder.Services.AddWolverineHttp();
@@ -155,6 +159,19 @@ app.UseStatusCodePages(); // ← added in 11.7 (empty-body 401/403 -> problem+js
 app.UseAuthentication(); // ← added in 11.4 (validates a presented token; rejects nothing yet)
 app.UseAuthorization(); // ← added in 11.4 (no RequireAuthorization until 11.7)
 app.MapDefaultEndpoints();
+
+// 13.8: named liveness/readiness probes. Anonymous by construction —
+// MapHealthChecks endpoints are not Wolverine endpoints, so RequireAuthorizeOnAll
+// (which only decorates the Wolverine set) never touches them, matching Phase 11's
+// anonymous /health + /alive decision.
+app.MapHealthChecks(
+    "/health/live",
+    new HealthCheckOptions { Predicate = registration => registration.Tags.Contains("live") }
+);
+app.MapHealthChecks(
+    "/health/ready",
+    new HealthCheckOptions { Predicate = registration => registration.Tags.Contains("ready") }
+);
 app.MapWolverineEndpoints(opts => opts.RequireAuthorizeOnAll()); // ← 11.7: secure-by-default
 
 app.UseHttpsRedirection();
