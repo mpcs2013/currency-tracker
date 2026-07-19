@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using CurrencyTracker.Api;
 using CurrencyTracker.Api.ErrorHandling;
 using CurrencyTracker.Api.Health;
 using CurrencyTracker.Application;
@@ -137,6 +138,8 @@ builder
         };
     });
 
+builder.Services.AddApiRateLimiting(builder.Configuration); // ← 13.9
+
 builder.Services.AddAuthorization(options =>
     options.AddPolicy("admin", policy => policy.RequireRole("admin"))
 );
@@ -157,6 +160,7 @@ if (app.Environment.IsDevelopment())
 app.UseExceptionHandler(); // ← added in 6.4
 app.UseStatusCodePages(); // ← added in 11.7 (empty-body 401/403 -> problem+json via IProblemDetailsService)
 app.UseAuthentication(); // ← added in 11.4 (validates a presented token; rejects nothing yet)
+app.UseRateLimiter(); // ← 13.9: AFTER auth so the per-user bucket sees
 app.UseAuthorization(); // ← added in 11.4 (no RequireAuthorization until 11.7)
 app.MapDefaultEndpoints();
 
