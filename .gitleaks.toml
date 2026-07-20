@@ -1,0 +1,30 @@
+# .gitleaks.toml — extends the bundled default rules; adds this repo's allowlist.
+# Every allowlist entry is a promise that this match is a known false positive.
+# Review this file whenever a new fixture or sample credential is added.
+
+[extend]
+# Start from gitleaks' maintained rule set (AWS, GitHub, Stripe, Slack, etc.)
+# and only ADD to it below. Never set useDefault = false — that would silently
+# disable ~160 built-in detectors.
+useDefault = true
+
+[allowlist]
+description = "CurrencyTracker known-safe patterns"
+
+# Paths whose credential-shaped strings are test/sample data, never real secrets.
+paths = [
+  # Aspire generates a dashboard token in local runs; any captured sample is
+  # ephemeral and local-only, never a production credential.
+  '''src/CurrencyTracker\.AppHost/.*appsettings\.Development\.json$''',
+  # Keycloak realm export ships a well-known DEV test-user password by design
+  # (documented in docs/auth.md); it is not a production secret.
+  '''src/CurrencyTracker\.AppHost/realms/realm-export\.json$''',
+  # Integration-test fixtures embed fake bearer/JWT strings to exercise auth.
+  '''tests/.*/(Fixtures|Fakes)/.*''',
+]
+
+# Regexes for known-fake tokens used in tests, matched by value rather than path.
+regexes = [
+  # The literal placeholder used across test JWTs — obviously not a real key.
+  '''test-signing-key-do-not-use''',
+]
