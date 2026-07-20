@@ -24,6 +24,19 @@ the Aspire dashboard):
 dotnet run --project src/CurrencyTracker.AppHost
 ```
 
+## How to test
+
+```powershell
+dotnet test -c Release
+```
+
+Runs the whole suite: Domain/Application/Infrastructure/Worker/ServiceDefaults
+unit tests, the Architecture tests (which fail the build on a dependency-
+direction violation), and the Testcontainers-backed integration tests
+(Postgres + Redis are pulled automatically — Docker must be running).
+CI collects coverage on this run and fails the build if it drops below the
+configured floor (see `.github/workflows/ci.yml`).
+
 Prerequisites:
 
 - .NET 10 SDK (10.0.300 or newer — see `global.json`).
@@ -79,45 +92,48 @@ fail the build when the contract is violated.
 
 ```mermaid
 flowchart LR
-    %% Production-code layers
     Domain[CurrencyTracker.Domain]
     Application[CurrencyTracker.Application]
     Infrastructure[CurrencyTracker.Infrastructure]
+    ServiceDefaults[CurrencyTracker.ServiceDefaults]
     Api[CurrencyTracker.Api]
     Worker[CurrencyTracker.Worker]
+    AppHost[CurrencyTracker.AppHost]
 
-    %% Test projects
-    DomainTests[Domain.UnitTests]
-    AppTests[Application.UnitTests]
-    ArchTests[Architecture.Tests]
-
-    %% Production-code reference arrows (solid; enforced by architecture tests)
     Application --> Domain
     Infrastructure --> Application
     Infrastructure --> Domain
     Api --> Infrastructure
     Api --> Application
     Api --> Domain
+    Api --> ServiceDefaults
     Worker --> Infrastructure
     Worker --> Application
     Worker --> Domain
+    Worker --> ServiceDefaults
+    AppHost -.orchestrates.-> Api
+    AppHost -.orchestrates.-> Worker
 
-    %% Test ? production arrows (dashed; convention, not enforced)
-    DomainTests -.-> Domain
-    AppTests -.-> Application
-    AppTests -.-> Domain
-    ArchTests -.-> Domain
-    ArchTests -.-> Application
-    ArchTests -.-> Infrastructure
-    ArchTests -.-> Api
-    ArchTests -.-> Worker
-
-    %% Styling: src/ blue, tests/ grey
     classDef src fill:#dbeafe,stroke:#1e3a8a,color:#0f172a
-    classDef tests fill:#f1f5f9,stroke:#475569,color:#0f172a,stroke-dasharray: 5 3
-    class Domain,Application,Infrastructure,Api,Worker src
-    class DomainTests,AppTests,ArchTests tests
+    class Domain,Application,Infrastructure,ServiceDefaults,Api,Worker,AppHost src
 ```
+
+## How to add a currency
+
+Currencies flow from the Frankfurter provider (Phase 9) through ingestion
+into Postgres and the read model. To track a new one:
+
+1. Confirm the provider returns it (Frankfurter supports the ECB set).
+2. Add/confirm the currency code in the Domain currency set
+   (`src/CurrencyTracker.Domain`) so the value object accepts it.
+3. If the ingestion slice filters codes, add it there
+   (`src/CurrencyTracker.Application` ingestion handler).
+4. Run the Worker's ingestion once (`Worker:IngestSchedule` to `*/30 * * * * ?`
+   for a fast local run) and confirm the rate lands via
+   `GET /api/v1/rates/latest`.
+5. Add a test asserting the new code round-trips through ingestion.
+
+No schema change is needed — rates are stored by code, not column.
 
 ## Project documents
 
