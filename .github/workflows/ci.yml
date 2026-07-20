@@ -108,6 +108,36 @@ jobs:
         if: steps.detect.outputs.has_csharp == 'true'
         run: dotnet test -c Release --no-build
 
+  codeql:
+    name: codeql
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read           # read the source
+      security-events: write   # upload SARIF alerts to the Security tab
+      actions: read            # read workflow run metadata (private-repo requirement; harmless on public)
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          global-json-file: global.json
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v4
+        with:
+          languages: csharp
+          build-mode: none
+
+      - name: Perform CodeQL analysis
+        uses: github/codeql-action/analyze@v4
+        with:
+          category: "/language:csharp"
+
   aspire-smoke:
     name: aspire-smoke
     needs: [changes, ci]
