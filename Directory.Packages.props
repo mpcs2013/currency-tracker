@@ -29,7 +29,7 @@
         <!-- Api -->
         <PackageVersion Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.10" />
         <!-- Test -->
-        <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.9" />
+        <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.10" />
         <!-- Api -->
         <PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="10.0.10" />
         <!-- Infrastructure -->
@@ -53,11 +53,11 @@
         <!-- MessagePack for serialization - AppHost -->
         <PackageVersion Include="MessagePack" Version="3.1.8" />
         <!-- Aspire -->
-        <PackageVersion Include="Microsoft.Extensions.Http.Resilience" Version="10.7.0" />
+        <PackageVersion Include="Microsoft.Extensions.Http.Resilience" Version="10.8.0" />
         <!-- Aspire -->
-        <PackageVersion Include="Microsoft.Extensions.ServiceDiscovery" Version="10.7.0" />
+        <PackageVersion Include="Microsoft.Extensions.ServiceDiscovery" Version="10.8.0" />
         <!-- Test -->
-        <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.7.0" />
+        <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.8.1" />
         <!-- Test -->
         <PackageVersion Include="NetArchTest.Rules" Version="1.3.2" />
         <!-- Infrastructure -->
@@ -65,15 +65,15 @@
         <!-- Test -->
         <PackageVersion Include="NSubstitute" Version="6.0.0" />
         <!-- Aspire -->
-        <PackageVersion Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.16.0" />
+        <PackageVersion Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.17.0" />
         <!-- Aspire -->
-        <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="1.16.0" />
+        <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="1.17.0" />
         <!-- Aspire -->
-        <PackageVersion Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.16.0" />
+        <PackageVersion Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.17.0" />
         <!-- Aspire -->
-        <PackageVersion Include="OpenTelemetry.Instrumentation.Http" Version="1.16.0" />
+        <PackageVersion Include="OpenTelemetry.Instrumentation.Http" Version="1.17.0" />
         <!-- Aspire -->
-        <PackageVersion Include="OpenTelemetry.Instrumentation.Runtime" Version="1.16.0" />
+        <PackageVersion Include="OpenTelemetry.Instrumentation.Runtime" Version="1.17.0" />
         <!-- Worker -->
         <PackageVersion Include="Quartz" Version="3.18.2" />
         <!-- Worker -->
@@ -96,19 +96,19 @@
         <!-- Test -->
         <PackageVersion Include="Testcontainers.Redis" Version="4.13.0" />
         <!-- Test -->
-        <PackageVersion Include="WireMock.Net" Version="2.12.0" />
+        <PackageVersion Include="WireMock.Net" Version="2.13.0" />
         <!-- Application, Api, Worker -->
-        <PackageVersion Include="WolverineFx" Version="6.17.3" />
+        <PackageVersion Include="WolverineFx" Version="6.21.0" />
         <!-- Worker -->
-        <PackageVersion Include="WolverineFx.EntityFrameworkCore" Version="6.17.3" />
+        <PackageVersion Include="WolverineFx.EntityFrameworkCore" Version="6.21.0" />
         <!-- Api, Worker -->
-        <PackageVersion Include="WolverineFx.FluentValidation" Version="6.17.3" />
+        <PackageVersion Include="WolverineFx.FluentValidation" Version="6.21.0" />
         <!-- added in 5.7 -->
-        <PackageVersion Include="WolverineFx.Http" Version="6.17.3" />
+        <PackageVersion Include="WolverineFx.Http" Version="6.21.0" />
         <!-- Worker -->
-        <PackageVersion Include="WolverineFx.Postgresql" Version="6.17.3" />
+        <PackageVersion Include="WolverineFx.Postgresql" Version="6.21.0" />
         <!-- Api, Worker -->
-        <PackageVersion Include="WolverineFx.RuntimeCompilation" Version="6.17.3" />
+        <PackageVersion Include="WolverineFx.RuntimeCompilation" Version="6.21.0" />
         <!-- Test -->
         <PackageVersion Include="xunit.runner.visualstudio" Version="3.1.5" />
         <!-- Test -->
