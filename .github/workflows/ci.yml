@@ -53,6 +53,10 @@ jobs:
     needs: changes
     if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
+    env:
+      # Measured baseline (see 13.14): first collected run reported ~63% line
+      # coverage; floor = measured - 5. Ratchet UP deliberately, never down.
+      COVERAGE_MIN: "58"
 
     steps:
       - name: Checkout
@@ -106,7 +110,41 @@ jobs:
 
       - name: Test
         if: steps.detect.outputs.has_csharp == 'true'
-        run: dotnet test -c Release --no-build
+        run: >
+          dotnet test -c Release --no-build
+          --collect:"XPlat Code Coverage"
+          --settings coverlet.runsettings
+          --results-directory ${{ github.workspace }}/coverage
+
+      - name: Merge coverage report
+        if: steps.detect.outputs.has_csharp == 'true'
+        run: |
+          dotnet tool install -g dotnet-reportgenerator-globaltool
+          reportgenerator \
+            -reports:"coverage/**/coverage.cobertura.xml" \
+            -targetdir:"coverage/report" \
+            -reporttypes:"Cobertura;TextSummary;MarkdownSummaryGithub"
+
+      - name: Upload coverage artifact
+        if: steps.detect.outputs.has_csharp == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage
+          path: coverage/report
+          retention-days: 14
+
+      - name: Coverage gate
+        if: steps.detect.outputs.has_csharp == 'true'
+        shell: bash
+        run: |
+          line_rate=$(python3 -c "import xml.etree.ElementTree as ET; print(ET.parse('coverage/report/Cobertura.xml').getroot().get('line-rate'))")
+          pct=$(python3 -c "print(round(float('$line_rate') * 100, 1))")
+          echo "Line coverage: ${pct}%  (floor: ${COVERAGE_MIN}%)"
+          echo "### Coverage: ${pct}% (floor ${COVERAGE_MIN}%)" >> "$GITHUB_STEP_SUMMARY"
+          awk "BEGIN { exit !($pct >= $COVERAGE_MIN) }" || {
+            echo "::error::Line coverage ${pct}% is below the floor of ${COVERAGE_MIN}%."
+            exit 1
+          }
 
   codeql:
     name: codeql
