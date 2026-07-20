@@ -207,3 +207,21 @@ jobs:
 
       - name: Run integration tests
         run: dotnet test tests/CurrencyTracker.Infrastructure.IntegrationTests --configuration Release --no-build
+
+  gitleaks:
+    name: gitleaks
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0          # full history so the diff scan sees every commit in the PR
+
+      - name: Gitleaks scan
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}   # used only to comment on the PR        
