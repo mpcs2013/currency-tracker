@@ -148,6 +148,8 @@ jobs:
 
   codeql:
     name: codeql
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
