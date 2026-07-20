@@ -1,0 +1,16 @@
+# .github/dependency-review-config.yml
+# Consumed by actions/dependency-review-action@v4 via config-file.
+# Keys are snake_case here (they are kebab-case when set inline under `with:`).
+
+# Fail the PR if it introduces a vulnerability at or above this severity.
+# "high" blocks high + critical; drop to "moderate" once the graph is clean
+# enough that the extra noise is worth it. This is the ratchet knob.
+fail_on_severity: high
+
+# Deny-list, NOT allow-list: permit by default, block only licenses that are
+# incompatible with this Apache-2.0 project. An allow-list would fail-noisy on
+# transitive packages whose license strings aren't clean SPDX identifiers.
+deny_licenses:
+  - GPL-2.0
+  - GPL-3.0
+  - AGPL-3.0
