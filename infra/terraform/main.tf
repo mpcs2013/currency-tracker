@@ -149,5 +149,22 @@ module "container_app_api" {
   tags = local.common_tags
 }
 
+# 14.23 — the Worker: Quartz-scheduled ingestion + outbox relay. No ingress,
+# exactly one replica (unclustered Quartz — see the module comment).
+module "container_app_worker" {
+  source = "./modules/container-app-worker"
+
+  name_prefix                  = var.name_prefix
+  resource_group_name          = data.azurerm_resource_group.env.name
+  container_app_environment_id = module.container_apps_env.id
+  acr_login_server             = module.acr.login_server
+
+  env_vars = {
+    DOTNET_ENVIRONMENT = var.environment == "prod" ? "Production" : "Staging"
+  }
+
+  tags = local.common_tags
+}
+
 #   ... through storage-logs (14.25)
 # ---------------------------------------------------------------------------
