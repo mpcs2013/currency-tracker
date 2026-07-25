@@ -166,5 +166,20 @@ module "container_app_worker" {
   tags = local.common_tags
 }
 
+# 14.24 — the least-privilege ledger: everything the two workload identities
+# may touch, one grant per line, scoped to single resources.
+module "role_assignments" {
+  source = "./modules/role-assignments"
+
+  api_principal_id    = module.container_app_api.principal_id
+  worker_principal_id = module.container_app_worker.principal_id
+
+  acr_id                       = module.acr.id
+  key_vault_id                 = module.keyvault.id
+  redis_cache_id               = module.redis.id
+  postgres_server_name         = module.postgres.name
+  postgres_resource_group_name = data.azurerm_resource_group.env.name
+}
+
 #   ... through storage-logs (14.25)
 # ---------------------------------------------------------------------------
