@@ -16,3 +16,7 @@ postgres_zone_redundant = false
 
 # UAT is reachable publicly but firewalled to known ranges (tightened in 14.G).
 enable_public_network_access = true
+
+# Environment VNet. Non-overlapping with PROD (10.30.0.0/16) so the two could
+# be peered later without renumbering. Subnets are derived in modules/network.
+vnet_address_space = ["10.20.0.0/16"]

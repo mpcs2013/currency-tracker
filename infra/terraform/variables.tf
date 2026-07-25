@@ -36,3 +36,8 @@ variable "enable_public_network_access" {
   description = "Whether env resources allow public network access (UAT: true + firewall; PROD: false)."
   type        = bool
 }
+
+variable "vnet_address_space" {
+  description = "Address space for the environment VNet. UAT and PROD must not overlap (peering-safe)."
+  type        = list(string)
+}
