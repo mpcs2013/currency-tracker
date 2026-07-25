@@ -13,11 +13,20 @@ resource "azurerm_container_app" "api" {
     type = "SystemAssigned"
   }
 
-  # How to authenticate to the ACR when an image lives there. Inert against
-  # the public placeholder; live the moment 14.D deploys <acr>/...:sha.
-  registry {
-    server   = var.acr_login_server
-    identity = "System"
+  # How to authenticate to the ACR when an image lives there. NOT inert against
+  # the public placeholder: Container Apps resolves registry credentials while
+  # provisioning the revision, whatever the image's origin. Declaring it before
+  # 14.24 grants AcrPull is a bootstrap cycle — the grant needs the identity,
+  # the identity is minted here — and the revision never provisions (ACR token
+  # exchange 401s until the platform gives up: "Operation expired"). So it stays
+  # off until the same change that points `image` at the ACR.
+  dynamic "registry" {
+    for_each = var.use_acr_registry ? [1] : []
+
+    content {
+      server   = var.acr_login_server
+      identity = "System"
+    }
   }
 
   ingress {
