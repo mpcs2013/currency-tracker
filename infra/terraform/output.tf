@@ -21,3 +21,8 @@ output "app_insights_connection_string" {
   value       = module.app_insights.connection_string
   sensitive   = true
 }
+
+output "api_fqdn" {
+  description = "Public FQDN of the API app — 14.38's smoke test target."
+  value       = module.container_app_api.fqdn
+}
