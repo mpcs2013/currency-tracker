@@ -19,3 +19,7 @@ enable_public_network_access = false
 
 # Environment VNet. Non-overlapping with UAT (10.20.0.0/16).
 vnet_address_space = ["10.30.0.0/16"]
+
+# General Purpose: the floor for zone-redundant HA (postgres_zone_redundant
+# = true above). Burstable + HA is an apply-time error.
+postgres_sku_name = "GP_Standard_D2s_v3"

@@ -20,3 +20,7 @@ enable_public_network_access = true
 # Environment VNet. Non-overlapping with PROD (10.30.0.0/16) so the two could
 # be peered later without renumbering. Subnets are derived in modules/network.
 vnet_address_space = ["10.20.0.0/16"]
+
+# Burstable: cheapest tier that runs the workload. Cannot host zone-redundant
+# HA — consistent with postgres_zone_redundant = false above.
+postgres_sku_name = "B_Standard_B1ms"
