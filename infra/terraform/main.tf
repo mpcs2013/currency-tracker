@@ -79,7 +79,19 @@ module "redis" {
   vnet_id                      = module.network.vnet_id
   tags                         = local.common_tags
 }
+# 14.19 — the secrets store every @Microsoft.KeyVault(...) reference (14.E)
+# resolves from. RBAC mode: data-plane access is a 14.24 role assignment.
+module "keyvault" {
+  source = "./modules/keyvault"
 
+  name_prefix                  = var.name_prefix
+  resource_group_name          = data.azurerm_resource_group.env.name
+  location                     = data.azurerm_resource_group.env.location
+  enable_public_network_access = var.enable_public_network_access
+  private_endpoint_subnet_id   = module.network.private_endpoint_subnet_id
+  vnet_id                      = module.network.vnet_id
+  tags                         = local.common_tags
+}
 
 #   ... through storage-logs (14.25)
 # ---------------------------------------------------------------------------
