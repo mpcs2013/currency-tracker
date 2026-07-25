@@ -181,5 +181,16 @@ module "role_assignments" {
   postgres_resource_group_name = data.azurerm_resource_group.env.name
 }
 
+# 14.25 — long-term archive for deploy logs/artifacts (14.54 uploads here).
+# Environment-scoped lifecycle; deliberately NOT the tfstate account.
+module "storage_logs" {
+  source = "./modules/storage-logs"
+
+  name_prefix         = var.name_prefix
+  resource_group_name = data.azurerm_resource_group.env.name
+  location            = data.azurerm_resource_group.env.location
+  tags                = local.common_tags
+}
+
 #   ... through storage-logs (14.25)
 # ---------------------------------------------------------------------------
