@@ -49,6 +49,21 @@ module "acr" {
   enable_public_network_access = var.enable_public_network_access
   tags                         = local.common_tags
 }
-#   module "postgres" { source = "./modules/postgres" ... }   # 14.17
+# 14.17 — system of record. Entra-only auth (no password exists anywhere);
+# VNet-injected + private DNS in PROD, public + TLS in UAT.
+module "postgres" {
+  source = "./modules/postgres"
+
+  name_prefix                  = var.name_prefix
+  resource_group_name          = data.azurerm_resource_group.env.name
+  location                     = data.azurerm_resource_group.env.location
+  sku_name                     = var.postgres_sku_name
+  zone_redundant               = var.postgres_zone_redundant
+  enable_public_network_access = var.enable_public_network_access
+  delegated_subnet_id          = module.network.postgres_subnet_id
+  vnet_id                      = module.network.vnet_id
+  tags                         = local.common_tags
+}
+
 #   ... through storage-logs (14.25)
 # ---------------------------------------------------------------------------

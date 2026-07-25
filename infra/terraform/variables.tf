@@ -41,3 +41,8 @@ variable "vnet_address_space" {
   description = "Address space for the environment VNet. UAT and PROD must not overlap (peering-safe)."
   type        = list(string)
 }
+
+variable "postgres_sku_name" {
+  description = "Flexible Server SKU. Must be an HA-capable tier (GP_*/MO_*) wherever postgres_zone_redundant = true."
+  type        = string
+}
