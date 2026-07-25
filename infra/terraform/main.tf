@@ -132,5 +132,22 @@ module "container_apps_env" {
   tags                         = local.common_tags
 }
 
+# 14.22 — the API. Placeholder image until 14.D deploys the real one;
+# the MI minted here is what 14.24 grants.
+module "container_app_api" {
+  source = "./modules/container-app-api"
+
+  name_prefix                  = var.name_prefix
+  resource_group_name          = data.azurerm_resource_group.env.name
+  container_app_environment_id = module.container_apps_env.id
+  acr_login_server             = module.acr.login_server
+
+  env_vars = {
+    ASPNETCORE_ENVIRONMENT = var.environment == "prod" ? "Production" : "Staging"
+  }
+
+  tags = local.common_tags
+}
+
 #   ... through storage-logs (14.25)
 # ---------------------------------------------------------------------------
