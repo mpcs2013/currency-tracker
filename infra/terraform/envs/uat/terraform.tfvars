@@ -26,5 +26,7 @@ vnet_address_space = ["10.20.0.0/16"]
 postgres_sku_name = "B_Standard_B1ms"
 
 # Smallest cache that exercises the real code path. No SLA — acceptable in UAT.
-redis_sku_name = "Basic"
-redis_capacity = 0
+# Balanced_B0 is Azure Managed Redis's entry tier and costs materially more than
+# the retired Basic/C0 it replaces; there is no cheaper AMR option.
+redis_sku_name                  = "Balanced_B0"
+redis_high_availability_enabled = false

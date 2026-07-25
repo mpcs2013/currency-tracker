@@ -24,6 +24,9 @@ vnet_address_space = ["10.30.0.0/16"]
 # = true above). Burstable + HA is an apply-time error.
 postgres_sku_name = "GP_Standard_D2s_v3"
 
-# Standard adds replication + SLA; C1 is the smallest sensible production size.
-redis_sku_name = "Standard"
-redis_capacity = 1
+# REVIEW BEFORE THE FIRST PROD APPLY. Standard/C1 died with Azure Cache for
+# Redis; this is a like-for-like guess at its replacement, not a costed choice.
+# high_availability_enabled is what buys the replica + SLA that "Standard" used
+# to imply — the SKU string no longer encodes it.
+redis_sku_name                  = "Balanced_B1"
+redis_high_availability_enabled = true

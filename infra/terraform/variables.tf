@@ -48,11 +48,11 @@ variable "postgres_sku_name" {
 }
 
 variable "redis_sku_name" {
-  description = "Azure Cache for Redis SKU: Basic, Standard, or Premium."
+  description = "Azure Managed Redis SKU, e.g. Balanced_B0 (entry tier) or Balanced_B1. The old Basic/Standard/Premium + capacity pair died with Azure Cache for Redis."
   type        = string
 }
 
-variable "redis_capacity" {
-  description = "Cache size within the C family (0 = 250 MB upward)."
-  type        = number
+variable "redis_high_availability_enabled" {
+  description = "Whether the cache runs a replica for its SLA (true in PROD). Mirrors postgres_zone_redundant: PROD buys resilience, UAT buys the lower bill."
+  type        = bool
 }

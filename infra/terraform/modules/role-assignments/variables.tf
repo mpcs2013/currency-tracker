@@ -18,8 +18,8 @@ variable "key_vault_id" {
   type        = string
 }
 
-variable "redis_cache_id" {
-  description = "Redis cache resource ID — Data Contributor access-policy target."
+variable "managed_redis_id" {
+  description = "Managed Redis resource ID — access-policy assignment target."
   type        = string
 }
 

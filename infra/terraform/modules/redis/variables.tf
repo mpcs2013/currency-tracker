@@ -14,13 +14,13 @@ variable "location" {
 }
 
 variable "sku_name" {
-  description = "Cache SKU: Basic, Standard, or Premium."
+  description = "Azure Managed Redis SKU, e.g. Balanced_B0 (entry tier), Balanced_B1, MemoryOptimized_M10. Replaces the retired product's sku_name + family + capacity triple."
   type        = string
 }
 
-variable "capacity" {
-  description = "Cache size within the C family (0-6)."
-  type        = number
+variable "high_availability_enabled" {
+  description = "Provision the replica that carries the SLA (PROD). false halves the cost and drops the SLA — the UAT posture, mirroring postgres_zone_redundant."
+  type        = bool
 }
 
 variable "enable_public_network_access" {
