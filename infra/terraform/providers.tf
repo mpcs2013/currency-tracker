@@ -5,6 +5,11 @@ provider "azurerm" {
   # provider-level behaviours for certain resource types, tuned per module later.
   features {}
 
+  # Storage data-plane calls go over Entra, not shared keys. modules/storage-logs
+  # sets shared_access_key_enabled = false, so the provider's post-create wait on
+  # the Blob service 403s (KeyBasedAuthenticationNotPermitted) without this.
+  storage_use_azuread = true
+
   # azurerm 4.x requires a subscription id. It is supplied via ARM_SUBSCRIPTION_ID
   # (locally from `az account show`; in CI from azure/login over OIDC) so the GUID
   # never lands in the repo. No client secret: auth is az login / OIDC federation.

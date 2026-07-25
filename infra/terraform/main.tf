@@ -76,7 +76,7 @@ module "redis" {
   resource_group_name          = data.azurerm_resource_group.env.name
   location                     = data.azurerm_resource_group.env.location
   sku_name                     = var.redis_sku_name
-  capacity                     = var.redis_capacity
+  high_availability_enabled    = var.redis_high_availability_enabled
   enable_public_network_access = var.enable_public_network_access
   private_endpoint_subnet_id   = module.network.private_endpoint_subnet_id
   vnet_id                      = module.network.vnet_id
@@ -176,7 +176,7 @@ module "role_assignments" {
 
   acr_id                       = module.acr.id
   key_vault_id                 = module.keyvault.id
-  redis_cache_id               = module.redis.id
+  managed_redis_id             = module.redis.id
   postgres_server_name         = module.postgres.name
   postgres_resource_group_name = data.azurerm_resource_group.env.name
 }

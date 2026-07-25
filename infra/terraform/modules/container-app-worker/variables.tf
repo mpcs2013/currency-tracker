@@ -18,6 +18,12 @@ variable "acr_login_server" {
   type        = string
 }
 
+variable "use_acr_registry" {
+  description = "Declare the ACR registry credential on the app. Must stay false until 14.24's AcrPull grant exists for this app's identity — see the bootstrap-cycle note in the API module. Flip it in the same change that points `image` at the ACR."
+  type        = bool
+  default     = false
+}
+
 variable "image" {
   description = "Bootstrap image only; the deploy pipeline owns the image after first apply (ignore_changes)."
   type        = string

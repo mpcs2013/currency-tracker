@@ -16,9 +16,14 @@ resource "azurerm_container_app" "worker" {
     type = "SystemAssigned"
   }
 
-  registry {
-    server   = var.acr_login_server
-    identity = "System"
+  # Off until 14.D — same bootstrap cycle as the API; see that module's comment.
+  dynamic "registry" {
+    for_each = var.use_acr_registry ? [1] : []
+
+    content {
+      server   = var.acr_login_server
+      identity = "System"
+    }
   }
 
   dynamic "secret" {

@@ -55,11 +55,15 @@ resource "azurerm_postgresql_flexible_server_active_directory_administrator" "ap
 
 # --- Redis: Data Contributor access policy — API ONLY. The Worker never
 # opens a cache connection (query slice is API-side; docs/caching.md), so it
-# gets no grant. Asymmetry on purpose; grants follow code. -------------------
-resource "azurerm_redis_cache_access_policy_assignment" "api_data_contributor" {
-  name               = "api-data-contributor"
-  redis_cache_id     = var.redis_cache_id
-  access_policy_name = "Data Contributor"
-  object_id          = var.api_principal_id
-  object_id_alias    = "ServicePrincipal"
+# gets no grant. Asymmetry on purpose; grants follow code.
+#
+# (Was azurerm_redis_cache_access_policy_assignment until the Azure Cache for
+# Redis retirement forced modules/redis onto AMR.) The AMR resource takes only
+# the target and the principal: no name, and no policy name — AMR exposes a
+# single built-in access policy, so there is nothing to select. That also means
+# no object_id_alias, so this grant has no equivalent of the principal_type
+# hint above; a just-created identity may need a retry while Entra replicates.
+resource "azurerm_managed_redis_access_policy_assignment" "api_data_contributor" {
+  managed_redis_id = var.managed_redis_id
+  object_id        = var.api_principal_id
 }
