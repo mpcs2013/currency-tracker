@@ -64,6 +64,22 @@ module "postgres" {
   vnet_id                      = module.network.vnet_id
   tags                         = local.common_tags
 }
+# 14.18 — distributed cache (Phase 10 query slice; /health/ready dependency).
+# Entra auth on; private endpoint materialises only in the private posture.
+module "redis" {
+  source = "./modules/redis"
+
+  name_prefix                  = var.name_prefix
+  resource_group_name          = data.azurerm_resource_group.env.name
+  location                     = data.azurerm_resource_group.env.location
+  sku_name                     = var.redis_sku_name
+  capacity                     = var.redis_capacity
+  enable_public_network_access = var.enable_public_network_access
+  private_endpoint_subnet_id   = module.network.private_endpoint_subnet_id
+  vnet_id                      = module.network.vnet_id
+  tags                         = local.common_tags
+}
+
 
 #   ... through storage-logs (14.25)
 # ---------------------------------------------------------------------------

@@ -46,3 +46,13 @@ variable "postgres_sku_name" {
   description = "Flexible Server SKU. Must be an HA-capable tier (GP_*/MO_*) wherever postgres_zone_redundant = true."
   type        = string
 }
+
+variable "redis_sku_name" {
+  description = "Azure Cache for Redis SKU: Basic, Standard, or Premium."
+  type        = string
+}
+
+variable "redis_capacity" {
+  description = "Cache size within the C family (0 = 250 MB upward)."
+  type        = number
+}
