@@ -92,6 +92,25 @@ module "keyvault" {
   vnet_id                      = module.network.vnet_id
   tags                         = local.common_tags
 }
+# 14.20 — telemetry sinks. The workspace is shared plumbing (14.21 logs into
+# it; 14.50-14.53 query it); App Insights is the 14.48 OTLP target.
+module "log_analytics" {
+  source = "./modules/log-analytics"
 
+  name_prefix         = var.name_prefix
+  resource_group_name = data.azurerm_resource_group.env.name
+  location            = data.azurerm_resource_group.env.location
+  tags                = local.common_tags
+}
+
+module "app_insights" {
+  source = "./modules/app-insights"
+
+  name_prefix                = var.name_prefix
+  resource_group_name        = data.azurerm_resource_group.env.name
+  location                   = data.azurerm_resource_group.env.location
+  log_analytics_workspace_id = module.log_analytics.id
+  tags                       = local.common_tags
+}
 #   ... through storage-logs (14.25)
 # ---------------------------------------------------------------------------

@@ -15,3 +15,9 @@ output "name_prefix" {
   description = "Resource-name prefix for this environment."
   value       = var.name_prefix
 }
+
+output "app_insights_connection_string" {
+  description = "Application Insights connection string for this environment (14.48/14.E consume it via terraform output -raw)."
+  value       = module.app_insights.connection_string
+  sensitive   = true
+}
