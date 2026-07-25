@@ -37,7 +37,18 @@ module "network" {
   vnet_address_space  = var.vnet_address_space
   tags                = local.common_tags
 }
-#   module "acr"      { source = "./modules/acr"      ... }   # 14.16
+# 14.16 — one registry per environment (see the walkthrough for why not
+# shared): pushed by main-ci (14.35), pulled by the apps' MIs (14.24),
+# imported into PROD by digest during deploy-prod (14.D).
+module "acr" {
+  source = "./modules/acr"
+
+  name_prefix                  = var.name_prefix
+  resource_group_name          = data.azurerm_resource_group.env.name
+  location                     = data.azurerm_resource_group.env.location
+  enable_public_network_access = var.enable_public_network_access
+  tags                         = local.common_tags
+}
 #   module "postgres" { source = "./modules/postgres" ... }   # 14.17
 #   ... through storage-logs (14.25)
 # ---------------------------------------------------------------------------
