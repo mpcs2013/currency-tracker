@@ -25,7 +25,7 @@ data "azurerm_resource_group" "env" {
 # and local.common_tags. They are intentionally absent in 14.B: their target
 # directories under ./modules do not exist yet, so declaring them now would break
 # `terraform init`. 14.C adds them in dependency order, for example:
-#
+
 # 14.15 — VNet + subnets consumed by postgres (14.17), redis/keyvault private
 # endpoints (14.18/14.19), and the Container Apps environment (14.21).
 module "network" {
@@ -37,6 +37,7 @@ module "network" {
   vnet_address_space  = var.vnet_address_space
   tags                = local.common_tags
 }
+
 # 14.16 — one registry per environment (see the walkthrough for why not
 # shared): pushed by main-ci (14.35), pulled by the apps' MIs (14.24),
 # imported into PROD by digest during deploy-prod (14.D).
@@ -49,6 +50,7 @@ module "acr" {
   enable_public_network_access = var.enable_public_network_access
   tags                         = local.common_tags
 }
+
 # 14.17 — system of record. Entra-only auth (no password exists anywhere);
 # VNet-injected + private DNS in PROD, public + TLS in UAT.
 module "postgres" {
@@ -64,6 +66,7 @@ module "postgres" {
   vnet_id                      = module.network.vnet_id
   tags                         = local.common_tags
 }
+
 # 14.18 — distributed cache (Phase 10 query slice; /health/ready dependency).
 # Entra auth on; private endpoint materialises only in the private posture.
 module "redis" {
@@ -79,6 +82,7 @@ module "redis" {
   vnet_id                      = module.network.vnet_id
   tags                         = local.common_tags
 }
+
 # 14.19 — the secrets store every @Microsoft.KeyVault(...) reference (14.E)
 # resolves from. RBAC mode: data-plane access is a 14.24 role assignment.
 module "keyvault" {
@@ -92,6 +96,7 @@ module "keyvault" {
   vnet_id                      = module.network.vnet_id
   tags                         = local.common_tags
 }
+
 # 14.20 — telemetry sinks. The workspace is shared plumbing (14.21 logs into
 # it; 14.50-14.53 query it); App Insights is the 14.48 OTLP target.
 module "log_analytics" {
@@ -112,5 +117,20 @@ module "app_insights" {
   log_analytics_workspace_id = module.log_analytics.id
   tags                       = local.common_tags
 }
+
+# 14.21 — the hosting environment for both apps. VNet-integrated in both
+# envs (parity); external LB in UAT, internal in PROD.
+module "container_apps_env" {
+  source = "./modules/container-apps-env"
+
+  name_prefix                  = var.name_prefix
+  resource_group_name          = data.azurerm_resource_group.env.name
+  location                     = data.azurerm_resource_group.env.location
+  infrastructure_subnet_id     = module.network.infrastructure_subnet_id
+  log_analytics_workspace_id   = module.log_analytics.id
+  enable_public_network_access = var.enable_public_network_access
+  tags                         = local.common_tags
+}
+
 #   ... through storage-logs (14.25)
 # ---------------------------------------------------------------------------
