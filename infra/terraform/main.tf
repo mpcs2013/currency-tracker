@@ -26,7 +26,17 @@ data "azurerm_resource_group" "env" {
 # directories under ./modules do not exist yet, so declaring them now would break
 # `terraform init`. 14.C adds them in dependency order, for example:
 #
-#   module "network"  { source = "./modules/network"  ... }   # 14.15
+# 14.15 — VNet + subnets consumed by postgres (14.17), redis/keyvault private
+# endpoints (14.18/14.19), and the Container Apps environment (14.21).
+module "network" {
+  source = "./modules/network"
+
+  name_prefix         = var.name_prefix
+  resource_group_name = data.azurerm_resource_group.env.name
+  location            = data.azurerm_resource_group.env.location
+  vnet_address_space  = var.vnet_address_space
+  tags                = local.common_tags
+}
 #   module "acr"      { source = "./modules/acr"      ... }   # 14.16
 #   module "postgres" { source = "./modules/postgres" ... }   # 14.17
 #   ... through storage-logs (14.25)
