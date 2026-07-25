@@ -24,3 +24,7 @@ vnet_address_space = ["10.20.0.0/16"]
 # Burstable: cheapest tier that runs the workload. Cannot host zone-redundant
 # HA — consistent with postgres_zone_redundant = false above.
 postgres_sku_name = "B_Standard_B1ms"
+
+# Smallest cache that exercises the real code path. No SLA — acceptable in UAT.
+redis_sku_name = "Basic"
+redis_capacity = 0

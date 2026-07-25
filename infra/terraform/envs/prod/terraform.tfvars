@@ -23,3 +23,7 @@ vnet_address_space = ["10.30.0.0/16"]
 # General Purpose: the floor for zone-redundant HA (postgres_zone_redundant
 # = true above). Burstable + HA is an apply-time error.
 postgres_sku_name = "GP_Standard_D2s_v3"
+
+# Standard adds replication + SLA; C1 is the smallest sensible production size.
+redis_sku_name = "Standard"
+redis_capacity = 1
