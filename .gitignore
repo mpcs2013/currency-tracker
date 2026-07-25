@@ -483,3 +483,26 @@ $RECYCLE.BIN/
 /.claude
 *.json
 /.github/workflows/claude-code-review.yml
+
+
+# --- Terraform (14.8) ---
+# Local provider cache and working directory.
+**/.terraform/*
+# State is remote (azurerm backend); a local state file is a mistake, never a commit.
+*.tfstate
+*.tfstate.*
+# Saved plan artefacts (binary) and crash logs.
+*.tfplan
+crash.log
+crash.*.log
+# Local override files used for ad-hoc experiments.
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+.terraformrc
+terraform.rc
+
+# Committed ON PURPOSE — do NOT ignore these:
+#   .terraform.lock.hcl          provider version + checksum lock (reproducibility)
+#   infra/terraform/**/*.tfvars  environment configuration, contains NO secrets
