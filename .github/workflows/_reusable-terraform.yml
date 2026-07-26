@@ -1,0 +1,111 @@
+# _reusable-terraform.yml — the enforced IaC gate (fmt/init/validate/
+# tflint/checkov/plan[/apply]) over ARM_* OIDC. The `environment` input
+# selects backend config, tfvars, OIDC trust, and AZURE_* vars TOGETHER
+# (the 14.B switch-together rule, encoded). Callers: terraform-pr.yml,
+# deploy-uat.yml, deploy-prod.yml.
+name: _reusable-terraform
+
+on:
+  workflow_call:
+    inputs:
+      working-dir:
+        description: Terraform root directory.
+        type: string
+        default: infra/terraform
+      environment:
+        description: Target environment (uat | prod).
+        type: string
+        required: true
+      apply:
+        description: Apply the plan after all gates pass.
+        type: boolean
+        default: false
+    outputs:
+      plan:
+        description: Human-readable plan output (truncated to 60k chars).
+        value: ${{ jobs.terraform.outputs.plan }}
+
+permissions:
+  contents: read
+
+jobs:
+  terraform:
+    name: terraform (${{ inputs.environment }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: ${{ inputs.environment }}
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      ARM_USE_OIDC: "true"
+      ARM_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
+      ARM_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
+      ARM_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+      TF_IN_AUTOMATION: "true"
+    defaults:
+      run:
+        working-directory: ${{ inputs.working-dir }}
+    outputs:
+      plan: ${{ steps.plan.outputs.plan }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          # Core version floats; versions.tf's required_version (>= 1.15)
+          # is the floor and init enforces it. Providers ARE pinned — via
+          # the committed .terraform.lock.hcl.
+          terraform_version: latest
+          terraform_wrapper: false
+
+      - name: fmt
+        run: terraform fmt -check -recursive
+
+      - name: init
+        run: terraform init -input=false -backend-config="envs/${{ inputs.environment }}/backend.hcl"
+
+      - name: validate
+        run: terraform validate
+
+      - name: Setup TFLint
+        uses: terraform-linters/setup-tflint@v6
+
+      - name: tflint
+        run: |
+          tflint --init
+          tflint --recursive --format compact
+        env:
+          GITHUB_TOKEN: ${{ github.token }}   # plugin download rate limits
+
+      - name: checkov
+        run: |
+          pipx install checkov
+          checkov -d . --quiet --compact
+
+      - name: plan
+        id: plan
+        shell: bash
+        run: |
+          terraform plan -input=false -no-color \
+            -var-file="envs/${{ inputs.environment }}/terraform.tfvars" \
+            -out=tfplan | tee plan.txt
+          {
+            echo "plan<<TFPLAN_EOF"
+            head -c 60000 plan.txt
+            echo ""
+            echo "TFPLAN_EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Upload plan artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: tfplan-${{ inputs.environment }}-${{ github.run_id }}
+          path: ${{ inputs.working-dir }}/plan.txt
+          retention-days: 90
+
+      - name: apply
+        if: inputs.apply
+        run: terraform apply -input=false -auto-approve tfplan
