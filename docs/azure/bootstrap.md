@@ -58,6 +58,21 @@ managed identity (AcrPull, KV Secrets User, etc.) are separate — 14.24. The
 **deploy identities' data-plane access to the *state* account** is separate too,
 and is recorded in the next section.
 
+Granted 2026-07-26 (14.32). Recorded assignment IDs (the `name` GUID is the
+assignment itself; `principalId` is the **service principal's** object ID —
+distinct from the App Registration object IDs in the 14.1 table):
+
+| Identity       | SP object ID (`principalId`)           | Role-assignment ID                     |
+| -------------- | -------------------------------------- | -------------------------------------- |
+| gh-deploy-uat  | `176ad327-50b8-4e32-a83b-9fc5f0d8315f` | `0be26f57-2fd4-446f-90d2-9fa69134db73` |
+| gh-deploy-prod | `e3f1ba33-b6bb-4ad3-8339-dd2a4122e70a` | `3902e547-fbbe-4115-a44f-9d39daff0394` |
+
+Both scoped to
+`.../resourceGroups/rg-currencytracker-tfstate/providers/Microsoft.Storage/storageAccounts/stcurrencytrackertfstate`
+(role definition `ba92f5b4-2d11-453d-a403-e96b0029c9fe`, Storage Blob Data
+Contributor). In a clean tenant (14.59) these GUIDs will differ — re-run the
+grant above and re-record.
+
 ## State-backend data-plane access (RBAC) — required for `use_azuread_auth`
 The `tfstate` container was created with `--auth-mode login`, and `backend.tf`
 (14.10) sets `use_azuread_auth = true`. Terraform therefore reaches the state
