@@ -1,0 +1,158 @@
+# deploy-prod.yml — leaf: PROD release (14.37). A v* tag walks the tagged
+# commit's UAT-soaked artifact into PROD behind the prod environment's reviewer
+# gate: apply PROD -> promote by digest -> health-gated revision.
+#
+# PROD NEVER BUILDS. A rebuild — even of the same commit — is a different
+# artifact (base-image drift, timestamps, cache state), and "we tested it in
+# UAT" would then be a claim about a sibling, not about the thing shipping.
+# `az acr import` copies manifest and layers registry-to-registry, and
+# addressing the source by DIGEST pins content rather than a movable tag.
+#
+# NOTE: each prod job pends for reviewer approval + the wait timer as it reaches
+# the environment, so a release is three approvals. The approvals are the point;
+# the wait timer is the knob if it grates. The seams (apply / promote / deploy)
+# are separately re-runnable, which one mega-job would trade away for one click.
+name: deploy-prod
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-prod
+  cancel-in-progress: false
+
+jobs:
+  # PROD's FIRST apply happens here, by design — 14.C withheld it precisely so
+  # it would land behind a reviewer rather than on a laptop. Read the plan
+  # artifact at the approval prompt; the AMR private-link path is flagged
+  # UNVERIFIED in 14.C and this is where it detonates if the guess was wrong.
+  terraform:
+    name: terraform
+    uses: ./.github/workflows/_reusable-terraform.yml
+    permissions:
+      contents: read
+      id-token: write
+    with:
+      environment: prod
+      apply: true
+
+  promote:
+    name: promote
+    needs: terraform
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: prod
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Azure login (OIDC)
+        uses: azure/login@v3
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      # github.sha on a tag push IS the tagged commit — the same value main-ci
+      # used as the image tag, which makes the digest lookup a pure join.
+      #
+      # The source registry's name and id arrive as prod-environment variables
+      # because gh-deploy-prod's world is rg-currencytracker-prod: it cannot
+      # list the UAT resource group to discover them. Its only reach into UAT is
+      # a single read-only AcrPull grant (see modules/role-assignments).
+      - name: Import UAT artifact into PROD ACR by digest
+        shell: bash
+        env:
+          SRC_NAME: ${{ vars.PROMOTION_SOURCE_ACR_NAME }}
+          SRC_ID: ${{ vars.PROMOTION_SOURCE_ACR_ID }}
+          RG: ${{ vars.AZURE_RESOURCE_GROUP }}
+          TAG: ${{ github.sha }}
+        run: |
+          if [ -z "$SRC_NAME" ] || [ -z "$SRC_ID" ]; then
+            echo "::error::PROMOTION_SOURCE_ACR_NAME/ID are unset on the prod environment. See docs/ci-cd/pipelines.md."
+            exit 1
+          fi
+
+          dest=$(az acr list -g "$RG" --query "[0].name" -o tsv)
+
+          for repo in api worker; do
+            digest=$(az acr manifest show-metadata \
+              --registry "$SRC_NAME" --name "${repo}:${TAG}" \
+              --query digest -o tsv) || {
+              echo "::error::No ${repo}:${TAG} in ${SRC_NAME}. Tag a commit whose main-ci run completed."
+              exit 1
+            }
+            echo "Promoting ${repo}@${digest} (tag ${TAG}, release ${GITHUB_REF_NAME})"
+            # Two tags over one digest: :<sha> so the deploy step addresses
+            # images uniformly across environments, :<vX.Y.Z> for humans.
+            # --force makes re-running a release idempotent.
+            az acr import --name "$dest" \
+              --source "${repo}@${digest}" \
+              --registry "$SRC_ID" \
+              --image "${repo}:${TAG}" \
+              --image "${repo}:${GITHUB_REF_NAME}" \
+              --force
+          done
+
+  deploy:
+    name: deploy
+    needs: promote
+    uses: ./.github/workflows/_reusable-azure-deploy.yml
+    permissions:
+      contents: read
+      id-token: write
+    with:
+      environment: prod
+      image-tag: ${{ github.sha }}
+      strict: false # 14.E flips, with UAT
+      http-smoke: false # internal-LB env: the FQDN is unreachable from a hosted
+        # runner, so the verdict is revision health (ADR 0015)
+
+  record:
+    name: record
+    needs: [terraform, promote, deploy]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Write deploy summary
+        shell: bash
+        run: |
+          {
+            echo "workflow:   ${{ github.workflow }}"
+            echo "run:        ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+            echo "release:    ${{ github.ref_name }}"
+            echo "commit:     ${{ github.sha }}"
+            echo "terraform:  ${{ needs.terraform.result }}"
+            echo "promote:    ${{ needs.promote.result }}"
+            echo "deploy:     ${{ needs.deploy.result }}"
+            echo "actor:      ${{ github.actor }}"
+          } | tee deploy-summary.txt
+
+      - name: Upload
+        uses: actions/upload-artifact@v7
+        with:
+          name: deploy-summary-${{ github.run_id }}
+          path: deploy-summary.txt
+          retention-days: 90
+
+  notify:
+    name: notify
+    needs: [terraform, promote, deploy]
+    if: failure() && vars.NOTIFICATIONS_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Post failure webhook
+        shell: bash
+        env:
+          WEBHOOK: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          payload=$(printf '{"text":"%s failed for release %s (%s) - %s/%s/actions/runs/%s"}' \
+            "${{ github.workflow }}" "${{ github.ref_name }}" "${{ github.sha }}" \
+            "${{ github.server_url }}" "${{ github.repository }}" "${{ github.run_id }}")
+          curl -sf -X POST -H "Content-Type: application/json" -d "$payload" "$WEBHOOK"

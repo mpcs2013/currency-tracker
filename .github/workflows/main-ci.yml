@@ -1,0 +1,148 @@
+# main-ci.yml — leaf: trunk pipeline (14.35). Certifies the merge commit,
+# builds both images, gates them with Trivy, and pushes them SHA-tagged to the
+# UAT ACR. The result is a release candidate: deploy-uat.yml ships it, and
+# deploy-prod.yml later promotes the very same bytes by digest.
+#
+# Why re-run tests the PR gate just passed: the merge commit is a NEW commit.
+# A squash-merge produces a tree that never ran under ci.yml as-merged (the PR
+# ran the branch head against an older main), so main-ci certifies the artifact
+# actually built from main's history.
+#
+# NOTE (14.36 drift): deploy-uat.yml does NOT chain off this workflow. UAT
+# promotion is a deliberate, manually dispatched act — see that file's header.
+name: main-ci
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - "**.md"
+      - "docs/**"
+      # infra/** is deliberately NOT ignored: an infra merge changes no image
+      # but must still produce a run, because a UAT apply is dispatched against
+      # a main-ci run's commit. Ignoring it here is a silent-drift machine.
+
+permissions:
+  contents: read
+
+concurrency:
+  group: main-ci
+  cancel-in-progress: false # every merge gets its artifact; no half-built RCs
+
+jobs:
+  # Full certification of the merge commit. Post-optimization the test suites
+  # are split three ways (see _reusable-test.yml's header), so trunk composes
+  # the same three producers the PR gate does and merges their coverage.
+  test:
+    name: ci
+    uses: ./.github/workflows/_reusable-test.yml
+
+  aspire-smoke:
+    name: aspire-smoke
+    uses: ./.github/workflows/_reusable-integration-tests.yml
+    with:
+      project: tests/CurrencyTracker.AppHost.SmokeTests
+      coverage-artifact: coverage-raw-aspire-smoke
+
+  infrastructure-integration-tests:
+    name: infrastructure-integration-tests
+    uses: ./.github/workflows/_reusable-integration-tests.yml
+    with:
+      project: tests/CurrencyTracker.Infrastructure.IntegrationTests
+      coverage-artifact: coverage-raw-infra-integration
+
+  coverage:
+    name: coverage
+    needs: [test, aspire-smoke, infrastructure-integration-tests]
+    uses: ./.github/workflows/_reusable-coverage-gate.yml
+
+  # There is no separate `build` job: _reusable-test.yml opens with the
+  # identical restore + `dotnet build -c Release`, and the images compile from
+  # source inside their own Dockerfiles anyway. A third compile of the same
+  # tree bought nothing.
+
+  docker-api:
+    name: docker-api
+    needs: coverage
+    uses: ./.github/workflows/_reusable-docker-build.yml
+    with:
+      dockerfile: src/CurrencyTracker.Api/Dockerfile
+      image-name: api
+      tag: ${{ github.sha }}
+
+  docker-worker:
+    name: docker-worker
+    needs: coverage
+    uses: ./.github/workflows/_reusable-docker-build.yml
+    with:
+      dockerfile: src/CurrencyTracker.Worker/Dockerfile
+      image-name: worker
+      tag: ${{ github.sha }}
+
+  # The needs: chain IS the security control. No push job can start before its
+  # own image's Trivy scan passes, and the tarball artifact is the only
+  # transport between them — so the bytes scanned are the bytes pushed.
+  # Collapsing docker+trivy+push into one job to "skip the tar" deletes the
+  # scan-before-push property; do not.
+  trivy-api:
+    name: trivy-api
+    needs: docker-api
+    uses: ./.github/workflows/_reusable-trivy-scan.yml
+    with:
+      image-name: api
+
+  trivy-worker:
+    name: trivy-worker
+    needs: docker-worker
+    uses: ./.github/workflows/_reusable-trivy-scan.yml
+    with:
+      image-name: worker
+
+  push-api:
+    name: push-api
+    needs: trivy-api
+    uses: ./.github/workflows/_reusable-acr-push.yml
+    permissions:
+      contents: read
+      id-token: write
+    with:
+      image-name: api
+      tag: ${{ github.sha }}
+      environment: uat
+
+  push-worker:
+    name: push-worker
+    needs: trivy-worker
+    uses: ./.github/workflows/_reusable-acr-push.yml
+    permissions:
+      contents: read
+      id-token: write
+    with:
+      image-name: worker
+      tag: ${{ github.sha }}
+      environment: uat
+
+  run-summary:
+    name: run-summary
+    needs: [push-api, push-worker]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Write summary # 14.39: trunk-run record, 30 days
+        shell: bash
+        run: |
+          {
+            echo "commit:        ${{ github.sha }}"
+            echo "api digest:    ${{ needs.push-api.outputs.digest }}"
+            echo "worker digest: ${{ needs.push-worker.outputs.digest }}"
+            echo "result:        push-api=${{ needs.push-api.result }} push-worker=${{ needs.push-worker.result }}"
+            echo "run:           ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          } | tee main-ci-summary.txt
+
+      - name: Upload
+        uses: actions/upload-artifact@v7
+        with:
+          name: main-ci-summary-${{ github.sha }}
+          path: main-ci-summary.txt
+          retention-days: 30

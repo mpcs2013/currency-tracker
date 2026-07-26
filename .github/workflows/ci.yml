@@ -101,102 +101,28 @@ jobs:
     uses: ./.github/workflows/_reusable-codeql.yml
 
   # Owns AppHost.SmokeTests outright — _reusable-test.yml excludes it. Running
-  # it here in isolation, rather than alongside every other assembly on one
-  # runner, is what keeps its Testcontainers port allocation reliable.
+  # it in isolation, rather than alongside every other assembly on one runner,
+  # is what keeps its Testcontainers port allocation reliable.
   # `needs: changes` only: it used to wait on `ci`, the very job that had already
   # run these same tests, which serialized the pipeline for no ordering reason.
   aspire-smoke:
     name: aspire-smoke
     needs: changes
     if: needs.changes.outputs.code == 'true'
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v7
-        with:
-          fetch-depth: 0
-
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v6
-        with:
-          global-json-file: global.json
-
-      - name: Cache NuGet packages
-        uses: actions/cache@v6
-        with:
-          path: ~/.nuget/packages
-          key: nuget-${{ runner.os }}-${{ hashFiles('**/packages.lock.json', 'Directory.Packages.props') }}
-          restore-keys: |
-            nuget-${{ runner.os }}-
-
-      - name: Restore
-        run: dotnet restore --locked-mode
-
-      - name: Build smoke tests
-        run: dotnet build tests/CurrencyTracker.AppHost.SmokeTests --configuration Release --no-restore
-
-      - name: Run aspire smoke
-        run: >
-          dotnet test tests/CurrencyTracker.AppHost.SmokeTests
-          --configuration Release --no-build
-          --collect:"XPlat Code Coverage"
-          --settings coverlet.runsettings
-          --results-directory ${{ github.workspace }}/coverage
-
-      - name: Upload raw coverage
-        uses: actions/upload-artifact@v7
-        with:
-          name: coverage-raw-aspire-smoke
-          path: coverage/**/coverage.cobertura.xml
-          retention-days: 1
+    uses: ./.github/workflows/_reusable-integration-tests.yml
+    with:
+      project: tests/CurrencyTracker.AppHost.SmokeTests
+      coverage-artifact: coverage-raw-aspire-smoke
 
   # Owns Infrastructure.IntegrationTests outright — see the aspire-smoke note.
   infrastructure-integration-tests:
     name: infrastructure-integration-tests
     needs: changes
     if: needs.changes.outputs.code == 'true'
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v7
-        with:
-          fetch-depth: 0
-
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v6
-        with:
-          global-json-file: global.json
-
-      - name: Cache NuGet packages
-        uses: actions/cache@v6
-        with:
-          path: ~/.nuget/packages
-          key: nuget-${{ runner.os }}-${{ hashFiles('**/packages.lock.json', 'Directory.Packages.props') }}
-          restore-keys: |
-            nuget-${{ runner.os }}-
-
-      - name: Restore
-        run: dotnet restore --locked-mode
-
-      - name: Build integration tests
-        run: dotnet build tests/CurrencyTracker.Infrastructure.IntegrationTests --configuration Release --no-restore
-
-      - name: Run integration tests
-        run: >
-          dotnet test tests/CurrencyTracker.Infrastructure.IntegrationTests
-          --configuration Release --no-build
-          --collect:"XPlat Code Coverage"
-          --settings coverlet.runsettings
-          --results-directory ${{ github.workspace }}/coverage
-
-      - name: Upload raw coverage
-        uses: actions/upload-artifact@v7
-        with:
-          name: coverage-raw-infra-integration
-          path: coverage/**/coverage.cobertura.xml
-          retention-days: 1
+    uses: ./.github/workflows/_reusable-integration-tests.yml
+    with:
+      project: tests/CurrencyTracker.Infrastructure.IntegrationTests
+      coverage-artifact: coverage-raw-infra-integration
 
   # The floor is applied here, not inside _reusable-test.yml, because coverage is
   # now collected across three jobs and no single one of them sees the whole

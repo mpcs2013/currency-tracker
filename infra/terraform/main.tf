@@ -142,6 +142,12 @@ module "container_app_api" {
   container_app_environment_id = module.container_apps_env.id
   acr_login_server             = module.acr.login_server
 
+  # 14.35: the deploy pipeline now ships private images from this ACR. Safe to
+  # declare because 14.24's AcrPull grant has long since propagated — the
+  # bootstrap cycle the module comment warns about is only a first-apply
+  # problem. Reaches UAT via a deploy-uat dispatch; PROD on its first apply.
+  use_acr_registry = true
+
   env_vars = {
     ASPNETCORE_ENVIRONMENT = var.environment == "prod" ? "Production" : "Staging"
   }
@@ -158,6 +164,9 @@ module "container_app_worker" {
   resource_group_name          = data.azurerm_resource_group.env.name
   container_app_environment_id = module.container_apps_env.id
   acr_login_server             = module.acr.login_server
+
+  # 14.35: same flip as the Api — see that block's note.
+  use_acr_registry = true
 
   env_vars = {
     DOTNET_ENVIRONMENT = var.environment == "prod" ? "Production" : "Staging"
@@ -179,6 +188,9 @@ module "role_assignments" {
   managed_redis_id             = module.redis.id
   postgres_server_name         = module.postgres.name
   postgres_resource_group_name = data.azurerm_resource_group.env.name
+
+  # 14.37 — null in PROD, gh-deploy-prod's object id in the UAT envelope.
+  promotion_pull_principal_id = var.promotion_pull_principal_id
 }
 
 # 14.25 — long-term archive for deploy logs/artifacts (14.54 uploads here).

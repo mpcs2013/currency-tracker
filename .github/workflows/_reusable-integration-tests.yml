@@ -1,0 +1,82 @@
+# _reusable-integration-tests.yml — run ONE container-heavy test project in
+# isolation, emitting raw Cobertura for the coverage gate to merge.
+#
+# Why these suites are isolated rather than part of _reusable-test.yml's sweep:
+# they start Testcontainers, and running them alongside every other assembly on
+# a single runner made Docker's random host-port assignment race (observed on
+# PR #373: "failed to listen on TCP socket: address already in use"). One suite
+# per runner removes the contention.
+#
+# Extracted here because main-ci.yml is the second caller — the same
+# "library before the second caller" rule that produced the 14.28 reusables.
+# Callers: ci.yml, main-ci.yml.
+name: _reusable-integration-tests
+
+on:
+  workflow_call:
+    inputs:
+      project:
+        description: Path to the test project directory.
+        type: string
+        required: true
+      coverage-artifact:
+        description: Name for this suite's raw-coverage artifact (must start
+          with `coverage-raw-` so _reusable-coverage-gate.yml picks it up).
+        type: string
+        required: true
+      configuration:
+        description: Build configuration.
+        type: string
+        default: Release
+      os:
+        description: Runner image.
+        type: string
+        default: ubuntu-latest
+
+permissions:
+  contents: read
+
+jobs:
+  integration:
+    name: integration
+    runs-on: ${{ inputs.os }}
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v6
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('**/packages.lock.json', 'Directory.Packages.props') }}
+          restore-keys: |
+            nuget-${{ runner.os }}-
+
+      - name: Restore
+        run: dotnet restore --locked-mode
+
+      - name: Build ${{ inputs.project }}
+        run: dotnet build ${{ inputs.project }} --configuration ${{ inputs.configuration }} --no-restore
+
+      - name: Test ${{ inputs.project }}
+        run: >
+          dotnet test ${{ inputs.project }}
+          --configuration ${{ inputs.configuration }} --no-build
+          --collect:"XPlat Code Coverage"
+          --settings coverlet.runsettings
+          --results-directory ${{ github.workspace }}/coverage
+
+      - name: Upload raw coverage
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ inputs.coverage-artifact }}
+          path: coverage/**/coverage.cobertura.xml
+          retention-days: 1

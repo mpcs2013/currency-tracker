@@ -32,3 +32,8 @@ variable "postgres_resource_group_name" {
   description = "Resource group of the Postgres server."
   type        = string
 }
+variable "promotion_pull_principal_id" {
+  description = "Object ID of the PROD deploy identity (gh-deploy-prod) that may PULL from this environment's ACR for `az acr import` promotion. null everywhere except the UAT envelope — the deliberate, read-only crack in the environment wall (14.37)."
+  type        = string
+  default     = null
+}

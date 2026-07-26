@@ -30,3 +30,11 @@ postgres_sku_name = "B_Standard_B1ms"
 # the retired Basic/C0 it replaces; there is no cheaper AMR option.
 redis_sku_name                  = "Balanced_B0"
 redis_high_availability_enabled = false
+# 14.37 — gh-deploy-prod's SERVICE PRINCIPAL object id: the read-only promotion
+# path into this environment's ACR (az acr import by digest). An object id is an
+# identifier, not a secret. Populate with:
+#   az ad sp list --display-name gh-deploy-prod --query "[0].id" -o tsv
+# (the service principal's id, NOT the app registration's — the classic Entra
+# mix-up that surfaces later as a 403 on the import).
+# Left unset until then: null keeps the grant out of the plan entirely.
+# promotion_pull_principal_id = "<object-id of the gh-deploy-prod service principal>"

@@ -67,3 +67,16 @@ resource "azurerm_managed_redis_access_policy_assignment" "api_data_contributor"
   managed_redis_id = var.managed_redis_id
   object_id        = var.api_principal_id
 }
+# 14.37 — promotion read path: the PROD deploy identity pulls the UAT-soaked
+# image by digest during `az acr import`. Pull-only, this registry only, and
+# only where the caller values the principal (UAT). This is the single
+# cross-environment edge in the whole design; keeping it in the Terraform
+# ledger — rather than as a manual grant — is what makes it reviewable.
+resource "azurerm_role_assignment" "promotion_acr_pull" {
+  count = var.promotion_pull_principal_id == null ? 0 : 1
+
+  scope                = var.acr_id
+  role_definition_name = "AcrPull"
+  principal_id         = var.promotion_pull_principal_id
+  principal_type       = "ServicePrincipal"
+}
