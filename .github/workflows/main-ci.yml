@@ -1,0 +1,107 @@
+# main-ci.yml — leaf: trunk pipeline. Certifies the merge commit, builds
+# both images, gates them with Trivy, pushes them SHA-tagged to the UAT
+# ACR. deploy-uat.yml chains off this workflow's success (workflow_run).
+name: main-ci
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - "**.md"
+      - "docs/**"
+      # infra/** deliberately NOT ignored: infra merges must reach
+      # deploy-uat's terraform apply, and deploy-uat chains off this run.
+
+permissions:
+  contents: read
+
+concurrency:
+  group: main-ci
+  cancel-in-progress: false   # every merge gets its artifact; no half-built RCs
+
+jobs:
+  build:
+    name: build
+    uses: ./.github/workflows/_reusable-build.yml
+
+  test:
+    name: ci
+    uses: ./.github/workflows/_reusable-test.yml
+
+  docker-api:
+    name: docker-api
+    needs: [build, test]
+    uses: ./.github/workflows/_reusable-docker-build.yml
+    with:
+      dockerfile: src/CurrencyTracker.Api/Dockerfile
+      image-name: api
+      tag: ${{ github.sha }}
+
+  docker-worker:
+    name: docker-worker
+    needs: [build, test]
+    uses: ./.github/workflows/_reusable-docker-build.yml
+    with:
+      dockerfile: src/CurrencyTracker.Worker/Dockerfile
+      image-name: worker
+      tag: ${{ github.sha }}
+
+  trivy-api:
+    name: trivy-api
+    needs: docker-api
+    uses: ./.github/workflows/_reusable-trivy-scan.yml
+    with:
+      image-name: api
+
+  trivy-worker:
+    name: trivy-worker
+    needs: docker-worker
+    uses: ./.github/workflows/_reusable-trivy-scan.yml
+    with:
+      image-name: worker
+
+  push-api:
+    name: push-api
+    needs: trivy-api
+    uses: ./.github/workflows/_reusable-acr-push.yml
+    permissions:
+      contents: read
+      id-token: write
+    with:
+      image-name: api
+      tag: ${{ github.sha }}
+      environment: uat
+
+  push-worker:
+    name: push-worker
+    needs: trivy-worker
+    uses: ./.github/workflows/_reusable-acr-push.yml
+    permissions:
+      contents: read
+      id-token: write
+    with:
+      image-name: worker
+      tag: ${{ github.sha }}
+      environment: uat
+
+  run-summary:
+    name: run-summary
+    needs: [push-api, push-worker]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Write and upload summary   # 14.39: trunk-run record, 30 days
+        shell: bash
+        run: |
+          {
+            echo "commit: ${{ github.sha }}"
+            echo "api digest:    ${{ needs.push-api.outputs.digest }}"
+            echo "worker digest: ${{ needs.push-worker.outputs.digest }}"
+            echo "result: push-api=${{ needs.push-api.result }} push-worker=${{ needs.push-worker.result }}"
+          } | tee main-ci-summary.txt
+      - name: Upload
+        uses: actions/upload-artifact@v7
+        with:
+          name: main-ci-summary-${{ github.sha }}
+          path: main-ci-summary.txt
+          retention-days: 30

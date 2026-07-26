@@ -142,6 +142,13 @@ module "container_app_api" {
   container_app_environment_id = module.container_apps_env.id
   acr_login_server             = module.acr.login_server
 
+  # 14.35: the deploy pipeline now ships private images from this ACR.
+  # Safe to declare because 14.24's AcrPull grant has long since
+  # propagated (the bootstrap cycle the module comment warns about is
+  # only a first-apply problem). Applied to UAT by deploy-uat's first
+  # run; to PROD by deploy-prod's first apply.
+  use_acr_registry = true
+
   env_vars = {
     ASPNETCORE_ENVIRONMENT = var.environment == "prod" ? "Production" : "Staging"
   }
@@ -158,6 +165,13 @@ module "container_app_worker" {
   resource_group_name          = data.azurerm_resource_group.env.name
   container_app_environment_id = module.container_apps_env.id
   acr_login_server             = module.acr.login_server
+
+  # 14.35: the deploy pipeline now ships private images from this ACR.
+  # Safe to declare because 14.24's AcrPull grant has long since
+  # propagated (the bootstrap cycle the module comment warns about is
+  # only a first-apply problem). Applied to UAT by deploy-uat's first
+  # run; to PROD by deploy-prod's first apply.
+  use_acr_registry = true
 
   env_vars = {
     DOTNET_ENVIRONMENT = var.environment == "prod" ? "Production" : "Staging"
