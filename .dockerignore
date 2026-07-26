@@ -1,0 +1,23 @@
+# .dockerignore — keep the Docker build context to what the SDK stage needs.
+# The context is the repo ROOT (see src/*/Dockerfile headers).
+
+**/bin/
+**/obj/
+**/.vs/
+.git/
+.github/
+docs/
+infra/
+tests/
+build/
+*.md
+coverage/
+
+# NOT excluded: .editorconfig. AnalysisMode=AllEnabledByDefault plus
+# TreatWarningsAsErrors=true (Directory.Build.props) make its severity
+# overrides load-bearing — without it the Release build fails on CA2007.
+
+# Machine-local MSBuild state: auto-imported as $(MSBuildProjectFullPath).user,
+# gitignored, so CI would never see it. Keep the context reproducible.
+**/*.user
+**/TestResults/
