@@ -15,7 +15,8 @@ coverage/
 
 # NOT excluded: .editorconfig. AnalysisMode=AllEnabledByDefault plus
 # TreatWarningsAsErrors=true (Directory.Build.props) make its severity
-# overrides load-bearing — without it the Release build fails on CA2007.
+# overrides load-bearing — without it the Release build fails on CA1000 in
+# Domain's Result.cs, and on CA2007 everywhere after that.
 
 # Machine-local MSBuild state: auto-imported as $(MSBuildProjectFullPath).user,
 # gitignored, so CI would never see it. Keep the context reproducible.
