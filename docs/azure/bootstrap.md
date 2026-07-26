@@ -112,10 +112,15 @@ role lands. Re-register these grants in a clean tenant (14.59).
 > reproducibility.
 
 ## GitHub Environments (14.6)
-| Environment | Reviewer | Wait  | Deployment branches | Variables                                            	 |
-| ----------- | -------- | ----- | ------------------- | ------------------------------------------------------- |
-| uat         | none     | none  | `main`              | AZURE_CLIENT_ID, AZURE_TENANT_ID, AZURE_SUBSCRIPTION_ID |
-| prod        | required | 5 min | `main`, `v*` tags   | AZURE_CLIENT_ID, AZURE_TENANT_ID, AZURE_SUBSCRIPTION_ID |
+| Environment | Reviewer | Wait  | Deployment branches | Variables                                                                    |
+| ----------- | -------- | ----- | ------------------- | ---------------------------------------------------------------------------- |
+| uat         | none     | none  | `main`              | AZURE_CLIENT_ID, AZURE_TENANT_ID, AZURE_SUBSCRIPTION_ID, AZURE_RESOURCE_GROUP |
+| prod        | required | 5 min | `main`, `v*` tags   | AZURE_CLIENT_ID, AZURE_TENANT_ID, AZURE_SUBSCRIPTION_ID, AZURE_RESOURCE_GROUP |
+
+`AZURE_RESOURCE_GROUP` (added 14.31) holds the environment's RG name from the
+14.3 table (`rg-currencytracker-uat` / `rg-currencytracker-prod`); workflows
+resolve the ACR (and other suffixed resources) at runtime via
+`az acr list -g` rather than hardcoding any resource name.
 
 Secrets (e.g. `SLACK_WEBHOOK_URL`) are set as environment **secrets** when the
 consuming workflow lands (14.39) — not recorded here.
