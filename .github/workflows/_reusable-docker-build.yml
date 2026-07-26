@@ -1,0 +1,56 @@
+# _reusable-docker-build.yml — buildx build with GHA layer cache, exported
+# as a tarball artifact. Deliberately does NOT push (scan-before-push:
+# 14.30 scans the tar, 14.31 pushes it). Callers: main-ci.yml.
+name: _reusable-docker-build
+
+on:
+  workflow_call:
+    inputs:
+      context:
+        description: Docker build context (repo-root relative).
+        type: string
+        default: "."
+      dockerfile:
+        description: Path to the Dockerfile.
+        type: string
+        required: true
+      image-name:
+        description: Bare image name, e.g. "api" or "worker".
+        type: string
+        required: true
+      tag:
+        description: Image tag (the commit SHA in main-ci).
+        type: string
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  docker-build:
+    name: docker-build (${{ inputs.image-name }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build image and export tarball
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ inputs.context }}
+          file: ${{ inputs.dockerfile }}
+          tags: ${{ inputs.image-name }}:${{ inputs.tag }}
+          cache-from: type=gha,scope=${{ inputs.image-name }}
+          cache-to: type=gha,scope=${{ inputs.image-name }},mode=max
+          outputs: type=docker,dest=/tmp/${{ inputs.image-name }}.tar
+
+      - name: Upload image artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: image-${{ inputs.image-name }}
+          path: /tmp/${{ inputs.image-name }}.tar
+          retention-days: 1
