@@ -1,0 +1,40 @@
+# _reusable-trivy-scan.yml — CVE gate on a built image tarball (from
+# _reusable-docker-build). Fails on HIGH/CRITICAL with a fix available;
+# exceptions live in the reviewed .trivyignore. Callers: main-ci.yml.
+name: _reusable-trivy-scan
+
+on:
+  workflow_call:
+    inputs:
+      image-name:
+        description: Bare image name whose "image-<name>" artifact to scan.
+        type: string
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  trivy-scan:
+    name: trivy-scan (${{ inputs.image-name }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout            # for .trivyignore
+        uses: actions/checkout@v7
+
+      - name: Download image artifact
+        uses: actions/download-artifact@v7
+        with:
+          name: image-${{ inputs.image-name }}
+          path: /tmp
+
+      - name: Trivy scan (gate)
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          input: /tmp/${{ inputs.image-name }}.tar
+          format: table
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: "1"
+          trivyignores: .trivyignore

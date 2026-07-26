@@ -13,7 +13,8 @@
         <!-- Determinism -->
         <Deterministic>true</Deterministic>
         <ContinuousIntegrationBuild Condition="'$(GITHUB_ACTIONS)' == 'true'"
-            >true</ContinuousIntegrationBuild>
+            >true</ContinuousIntegrationBuild
+        >
         <!-- Output / repo hygiene -->
         <GenerateDocumentationFile>true</GenerateDocumentationFile>
         <NoWarn>$(NoWarn);CS1591</NoWarn>
