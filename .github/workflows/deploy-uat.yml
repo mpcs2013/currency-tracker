@@ -1,0 +1,164 @@
+# deploy-uat.yml — leaf: UAT delivery (14.36). Applies UAT, deploys a
+# main-ci-produced image pair, smokes the Api.
+#
+# ============================ RECORDED DRIFT =================================
+# The Phase 14.D plan specifies `workflow_run` after main-ci, i.e. UAT deploys
+# automatically on every merge to main. That is deliberately NOT implemented:
+# the project owner's requirement is that no merge deploys to the UAT Azure
+# environment on its own. UAT promotion is therefore an explicit act —
+# workflow_dispatch with the SHA of a main-ci run that already pushed images.
+#
+# What this trades away: the plan's "merge to main -> auto-deploy UAT" DoD line.
+# What it buys: Azure is touched only when a human asks. The pipeline is
+# otherwise identical, and re-enabling automation later is a five-line change
+# (add the workflow_run trigger back and restore the conclusion guard in `gate`).
+#
+# strict:false until 14.E wires config — the Api fail-fasts without its
+# connection strings and authority, so the first real deploys CANNOT be healthy.
+# The gate reports and warns; 14.E flips strict:true with the config that makes
+# passing possible. See _reusable-azure-deploy.yml.
+# =============================================================================
+name: deploy-uat
+
+on:
+  workflow_dispatch:
+    inputs:
+      image-tag:
+        description: Commit SHA of an already-pushed image pair (from a main-ci run).
+        type: string
+        required: true
+      apply-terraform:
+        description: Run terraform apply for UAT before deploying.
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-uat
+  cancel-in-progress: false # deploys serialize; never abandon a half-applied env
+
+jobs:
+  # Dispatch trusts its input, so verify the artifact exists before Terraform
+  # touches anything. Without this the run applies infrastructure and then dies
+  # at image-pull time with MANIFEST_UNKNOWN — a far more expensive way to learn
+  # you typed the wrong SHA.
+  gate:
+    name: gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: uat
+    permissions:
+      contents: read
+      id-token: write
+    outputs:
+      image-tag: ${{ steps.resolve.outputs.tag }}
+    steps:
+      - name: Azure login (OIDC)
+        uses: azure/login@v3
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Resolve and verify image tag
+        id: resolve
+        shell: bash
+        env:
+          RG: ${{ vars.AZURE_RESOURCE_GROUP }}
+          TAG: ${{ inputs.image-tag }}
+        run: |
+          acr=$(az acr list -g "$RG" --query "[0].name" -o tsv)
+          for repo in api worker; do
+            if ! az acr manifest show-metadata \
+                   --registry "$acr" --name "${repo}:${TAG}" --query digest -o tsv >/dev/null 2>&1; then
+              echo "::error::No ${repo}:${TAG} in ${acr}. Dispatch a SHA whose main-ci run pushed images."
+              exit 1
+            fi
+          done
+          echo "tag=${TAG}" | tee -a "$GITHUB_OUTPUT"
+
+  # Terraform applies BEFORE the deploy so this run carries any pending
+  # registry/config change to Azure ahead of the private-image pull that needs
+  # it — the bootstrap ordering, resolved.
+  terraform:
+    name: terraform
+    needs: gate
+    if: inputs.apply-terraform
+    uses: ./.github/workflows/_reusable-terraform.yml
+    permissions:
+      contents: read
+      id-token: write
+    with:
+      environment: uat
+      apply: true
+
+  deploy:
+    name: deploy
+    needs: [gate, terraform]
+    # `always()` + an explicit failure check, so skipping the optional terraform
+    # job does not skip the deploy.
+    if: always() && needs.gate.result == 'success' && needs.terraform.result != 'failure'
+    uses: ./.github/workflows/_reusable-azure-deploy.yml
+    permissions:
+      contents: read
+      id-token: write
+    with:
+      environment: uat
+      image-tag: ${{ needs.gate.outputs.image-tag }}
+      strict: false # 14.E flips, with the config that makes passing possible
+      http-smoke: true
+
+  # 14.39 — the reconstruction record is most valuable precisely when something
+  # upstream failed, hence always(). needs.*.result captures skipped too.
+  record:
+    name: record
+    needs: [gate, terraform, deploy]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Write deploy summary
+        shell: bash
+        run: |
+          {
+            echo "workflow:   ${{ github.workflow }}"
+            echo "run:        ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+            echo "commit:     ${{ github.sha }}"
+            echo "image-tag:  ${{ needs.gate.outputs.image-tag || inputs.image-tag }}"
+            echo "gate:       ${{ needs.gate.result }}"
+            echo "terraform:  ${{ needs.terraform.result }}"
+            echo "deploy:     ${{ needs.deploy.result }}"
+            echo "actor:      ${{ github.actor }}"
+            echo "ref:        ${{ github.ref }}"
+          } | tee deploy-summary.txt
+
+      - name: Upload
+        uses: actions/upload-artifact@v7
+        with:
+          name: deploy-summary-${{ github.run_id }}
+          path: deploy-summary.txt
+          retention-days: 90
+
+  # 14.39 — failure() means a red job in needs, never "warnings only": under the
+  # strictness ladder a warned deploy is a SUCCESSFUL run. Do not "improve" this
+  # to !success(), which also matches cancelled and skipped chains.
+  # The webhook is a repo-level secret on purpose: an environment-scoped one
+  # would park the message telling you UAT broke behind an approval gate.
+  notify:
+    name: notify
+    needs: [gate, terraform, deploy]
+    if: failure() && vars.NOTIFICATIONS_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Post failure webhook
+        shell: bash
+        env:
+          WEBHOOK: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          payload=$(printf '{"text":"%s failed for %s on %s - %s/%s/actions/runs/%s"}' \
+            "${{ github.workflow }}" "${{ github.sha }}" "${{ github.ref_name }}" \
+            "${{ github.server_url }}" "${{ github.repository }}" "${{ github.run_id }}")
+          curl -sf -X POST -H "Content-Type: application/json" -d "$payload" "$WEBHOOK"

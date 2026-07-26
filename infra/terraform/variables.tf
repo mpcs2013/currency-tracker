@@ -56,3 +56,8 @@ variable "redis_high_availability_enabled" {
   description = "Whether the cache runs a replica for its SLA (true in PROD). Mirrors postgres_zone_redundant: PROD buys resilience, UAT buys the lower bill."
   type        = bool
 }
+variable "promotion_pull_principal_id" {
+  description = "Object ID of gh-deploy-prod, granted AcrPull on this env's ACR for release promotion (az acr import by digest). Set in the UAT envelope only; null in PROD. See modules/role-assignments and docs/ci-cd/pipelines.md."
+  type        = string
+  default     = null
+}

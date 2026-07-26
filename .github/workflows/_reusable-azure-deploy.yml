@@ -123,10 +123,31 @@ jobs:
           smoke "live"  "https://${fqdn}/health/live"  ""
           smoke "ready" "https://${fqdn}/health/ready" ""
 
+          # 14.38 — the rates leg asserts the PAYLOAD, not the status code. A
+          # 200 with an empty body is a load balancer, not a service: behind a
+          # healthy gateway this path can return an error page, an empty body,
+          # or a redirect-to-login rendered as 200 by a helpful proxy. Checking
+          # that the JSON actually names the requested pair makes one request a
+          # claim about the Phase 10 query slice, the Phase 11 auth path, and
+          # the Phase 8 persistence underneath.
+          #
+          # The assertion is deliberately shallow — presence of `base` and the
+          # requested currency. Smoke proves SERVICE, not correctness; the Alba
+          # integration suite owns correctness, and a smoke that re-implements
+          # it is a second test suite with worse tooling. The grep pair also
+          # keeps the leg dependency-free (no jq install for two checks).
           if [ -n "$SMOKE_TOKEN_RESOURCE" ]; then
             token=$(az account get-access-token --resource "$SMOKE_TOKEN_RESOURCE" \
                       --query accessToken -o tsv)
-            smoke "rates" "https://${fqdn}/api/v1/rates/latest?base=USD&target=EUR" "$token"
+            body=$(curl -s -H "Authorization: Bearer $token" -H "Accept: application/json" \
+                     "https://${fqdn}/api/v1/rates/latest?base=USD&target=EUR")
+            echo "smoke rates payload: ${body:0:200}"
+            if echo "$body" | grep -q '"base"' && echo "$body" | grep -q 'USD'; then
+              echo "smoke rates: payload OK"
+            else
+              fail=1
+              echo "::warning::smoke rates payload did not contain the requested pair"
+            fi
           else
             echo "::notice::SMOKE_TOKEN_RESOURCE not set - authenticated smoke leg skipped (arrives with 14.E)."
           fi
