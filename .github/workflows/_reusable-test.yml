@@ -1,0 +1,87 @@
+# _reusable-test.yml — restore + build + test with coverage and the
+# measured-floor gate (13.14: floor = measured - 5; ratchet UP only).
+# Self-contained; callers: ci.yml, main-ci.yml.
+name: _reusable-test
+
+on:
+  workflow_call:
+    inputs:
+      configuration:
+        description: Build configuration.
+        type: string
+        default: Release
+      os:
+        description: Runner image.
+        type: string
+        default: ubuntu-latest
+      coverage-min:
+        description: Minimum line-coverage percentage (string, e.g. "58").
+        type: string
+        default: "58"
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: test
+    runs-on: ${{ inputs.os }}
+    timeout-minutes: 20
+    env:
+      COVERAGE_MIN: ${{ inputs.coverage-min }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v6
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('**/packages.lock.json', 'Directory.Packages.props') }}
+          restore-keys: |
+            nuget-${{ runner.os }}-
+
+      - name: Restore
+        run: dotnet restore --locked-mode
+
+      - name: Build
+        run: dotnet build -c ${{ inputs.configuration }} --no-restore
+
+      - name: Test
+        run: >
+          dotnet test -c ${{ inputs.configuration }} --no-build
+          --collect:"XPlat Code Coverage"
+          --settings coverlet.runsettings
+          --results-directory ${{ github.workspace }}/coverage
+
+      - name: Merge coverage report
+        run: |
+          dotnet tool install -g dotnet-reportgenerator-globaltool
+          reportgenerator \
+            -reports:"coverage/**/coverage.cobertura.xml" \
+            -targetdir:"coverage/report" \
+            -reporttypes:"Cobertura;TextSummary;MarkdownSummaryGithub"
+
+      - name: Upload coverage artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: coverage-${{ github.run_id }}-${{ github.run_attempt }}
+          path: coverage/report
+          retention-days: 14
+
+      - name: Coverage gate
+        shell: bash
+        run: |
+          line_rate=$(python3 -c "import xml.etree.ElementTree as ET; print(ET.parse('coverage/report/Cobertura.xml').getroot().get('line-rate'))")
+          pct=$(python3 -c "print(round(float('$line_rate') * 100, 1))")
+          echo "Line coverage: ${pct}%  (floor: ${COVERAGE_MIN}%)"
+          echo "### Coverage: ${pct}% (floor ${COVERAGE_MIN}%)" >> "$GITHUB_STEP_SUMMARY"
+          awk "BEGIN { exit !($pct >= $COVERAGE_MIN) }" || {
+            echo "::error::Line coverage ${pct}% is below the floor of ${COVERAGE_MIN}%."
+            exit 1
+          }

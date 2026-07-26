@@ -1,0 +1,46 @@
+# _reusable-build.yml — restore + compile gate. Self-contained (no artifact
+# hand-off; see Phase 14.D walkthrough, step 14.28). Callers: ci.yml, main-ci.yml.
+name: _reusable-build
+
+on:
+  workflow_call:
+    inputs:
+      configuration:
+        description: Build configuration.
+        type: string
+        default: Release
+      os:
+        description: Runner image.
+        type: string
+        default: ubuntu-latest
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: build
+    runs-on: ${{ inputs.os }}
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v6
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('**/packages.lock.json', 'Directory.Packages.props') }}
+          restore-keys: |
+            nuget-${{ runner.os }}-
+
+      - name: Restore
+        run: dotnet restore --locked-mode
+
+      - name: Build
+        run: dotnet build -c ${{ inputs.configuration }} --no-restore

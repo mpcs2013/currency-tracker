@@ -49,135 +49,34 @@ jobs:
                 echo "::notice::Doc-only change - skipping build, tests, and integration jobs."
             fi
 
+  format:
+    name: format
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+    uses: ./.github/workflows/_reusable-format.yml
+
+  build:
+    name: build
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+    uses: ./.github/workflows/_reusable-build.yml
+
   ci:
     name: ci
     needs: changes
     if: needs.changes.outputs.code == 'true'
-    runs-on: ubuntu-latest
-    env:
-      # Measured baseline (see 13.14): first collected run reported ~63% line
-      # coverage; floor = measured - 5. Ratchet UP deliberately, never down.
-      COVERAGE_MIN: "58"
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v7
-        with:
-          fetch-depth: 0
-
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v6
-        with:
-          global-json-file: global.json
-
-      - name: Cache NuGet packages
-        uses: actions/cache@v6
-        with:
-          path: ~/.nuget/packages
-          key: nuget-${{ runner.os }}-${{ hashFiles('**/packages.lock.json', 'Directory.Packages.props') }}
-          restore-keys: |
-            nuget-${{ runner.os }}-
-
-      - name: Detect C# sources
-        id: detect
-        shell: bash
-        run: |
-            if compgen -G "**/*.csproj" > /dev/null; then
-                echo "has_csharp=true" >> "$GITHUB_OUTPUT"
-            else
-                echo "has_csharp=false" >> "$GITHUB_OUTPUT"
-                echo "::notice::No .csproj files yet — skipping build and test."
-            fi
-
-      - name: Install CSharpier
-        if: steps.detect.outputs.has_csharp == 'true'
-        run: dotnet tool install -g csharpier
-
-      - name: CSharpier check
-        if: steps.detect.outputs.has_csharp == 'true'
-        run: csharpier --check .
-
-      - name: Format check
-        if: steps.detect.outputs.has_csharp == 'true'
-        run: dotnet format --verify-no-changes --no-restore
-
-      - name: Restore
-        if: steps.detect.outputs.has_csharp == 'true'
-        run: dotnet restore --locked-mode
-
-      - name: Build
-        if: steps.detect.outputs.has_csharp == 'true'
-        run: dotnet build -c Release --no-restore
-
-      - name: Test
-        if: steps.detect.outputs.has_csharp == 'true'
-        run: >
-          dotnet test -c Release --no-build
-          --collect:"XPlat Code Coverage"
-          --settings coverlet.runsettings
-          --results-directory ${{ github.workspace }}/coverage
-
-      - name: Merge coverage report
-        if: steps.detect.outputs.has_csharp == 'true'
-        run: |
-          dotnet tool install -g dotnet-reportgenerator-globaltool
-          reportgenerator \
-            -reports:"coverage/**/coverage.cobertura.xml" \
-            -targetdir:"coverage/report" \
-            -reporttypes:"Cobertura;TextSummary;MarkdownSummaryGithub"
-
-      - name: Upload coverage artifact
-        if: steps.detect.outputs.has_csharp == 'true'
-        uses: actions/upload-artifact@v7
-        with:
-          name: coverage
-          path: coverage/report
-          retention-days: 14
-
-      - name: Coverage gate
-        if: steps.detect.outputs.has_csharp == 'true'
-        shell: bash
-        run: |
-          line_rate=$(python3 -c "import xml.etree.ElementTree as ET; print(ET.parse('coverage/report/Cobertura.xml').getroot().get('line-rate'))")
-          pct=$(python3 -c "print(round(float('$line_rate') * 100, 1))")
-          echo "Line coverage: ${pct}%  (floor: ${COVERAGE_MIN}%)"
-          echo "### Coverage: ${pct}% (floor ${COVERAGE_MIN}%)" >> "$GITHUB_STEP_SUMMARY"
-          awk "BEGIN { exit !($pct >= $COVERAGE_MIN) }" || {
-            echo "::error::Line coverage ${pct}% is below the floor of ${COVERAGE_MIN}%."
-            exit 1
-          }
+    uses: ./.github/workflows/_reusable-test.yml
+    # coverage-min defaults to "58" inside the reusable (13.14 floor).
 
   codeql:
     name: codeql
     needs: changes
     if: needs.changes.outputs.code == 'true'
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
     permissions:
-      contents: read           # read the source
-      security-events: write   # upload SARIF alerts to the Security tab
-      actions: read            # read workflow run metadata (private-repo requirement; harmless on public)
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v7
-        with:
-          fetch-depth: 0
-
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v6
-        with:
-          global-json-file: global.json
-
-      - name: Initialize CodeQL
-        uses: github/codeql-action/init@v4
-        with:
-          languages: csharp
-          build-mode: none
-
-      - name: Perform CodeQL analysis
-        uses: github/codeql-action/analyze@v4
-        with:
-          category: "/language:csharp"
+      contents: read
+      security-events: write
+      actions: read
+    uses: ./.github/workflows/_reusable-codeql.yml
 
   aspire-smoke:
     name: aspire-smoke
@@ -185,7 +84,6 @@ jobs:
     if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 5
-
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -220,7 +118,6 @@ jobs:
     if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 5
-
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -265,7 +162,7 @@ jobs:
       - name: Gitleaks scan
         uses: gitleaks/gitleaks-action@v3
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}   # used only to comment on the PR        
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}   # used only to comment on the PR
 
   dependency-review:
     name: dependency-review
@@ -281,4 +178,4 @@ jobs:
       - name: Dependency review
         uses: actions/dependency-review-action@v5
         with:
-          config-file: ./.github/dependency-review-config.yml          
+          config-file: ./.github/dependency-review-config.yml

@@ -1,0 +1,48 @@
+# _reusable-format.yml — CSharpier + dotnet-format verification.
+# Steps lifted from the pre-14.28 ci.yml `ci` job (13.x lineage), with one
+# correction: `dotnet format` needs a restored project graph. In the old job
+# `Format check` ran BEFORE `Restore`, which only ever "worked" because the
+# whole step set was gated behind a `has_csharp` check that never matched
+# (compgen -G "**/*.csproj" does not recurse without globstar), so none of it
+# ran. Restoring first is what makes --no-restore correct here.
+name: _reusable-format
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  format:
+    name: format
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v6
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('**/packages.lock.json', 'Directory.Packages.props') }}
+          restore-keys: |
+            nuget-${{ runner.os }}-
+
+      - name: Install CSharpier
+        run: dotnet tool install -g csharpier
+
+      - name: CSharpier check
+        run: csharpier check .
+
+      - name: Restore
+        run: dotnet restore --locked-mode
+
+      - name: Format check
+        run: dotnet format --verify-no-changes --no-restore

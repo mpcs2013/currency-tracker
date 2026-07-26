@@ -1,4 +1,4 @@
-﻿using CurrencyTracker.Application.Abstractions.Persistence;
+using CurrencyTracker.Application.Abstractions.Persistence;
 using CurrencyTracker.Domain.Currencies;
 using CurrencyTracker.Domain.Rates;
 using CurrencyTracker.Infrastructure.Persistence;
