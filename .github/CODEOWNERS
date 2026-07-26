@@ -1,0 +1,17 @@
+# CODEOWNERS — review gate on the files that can change what CI is allowed to do.
+#
+# For `pull_request` events GitHub executes the workflow definition from the PR
+# HEAD, so a PR that edits a workflow runs with that edit. Concretely: flipping
+# terraform-pr.yml's `apply: false` to `true`, or adding a job that calls
+# _reusable-azure-deploy.yml, would execute against real Azure on the PR run.
+# Requiring an owner review on these paths is what closes that door.
+#
+# This only takes effect once branch protection on `main` enables
+# "Require review from Code Owners" (and a non-zero required approving review
+# count). Adding the file alone changes nothing.
+
+/.github/workflows/   @mpcs2013
+/.github/CODEOWNERS   @mpcs2013
+
+# Infrastructure-as-code reaches the same subscriptions the pipeline deploys to.
+/infra/               @mpcs2013
