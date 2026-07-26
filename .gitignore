@@ -154,6 +154,9 @@ _TeamCity*
 coverage*.json
 coverage*.xml
 coverage*.info
+# CI writes the collected run + merged report here (--results-directory
+# $GITHUB_WORKSPACE/coverage); the patterns above don't match that directory.
+coverage/
 
 # Visual Studio code coverage results
 *.coverage

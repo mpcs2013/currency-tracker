@@ -5,6 +5,14 @@
       <DataCollector friendlyName="XPlat Code Coverage">
         <Configuration>
           <Format>cobertura</Format>
+          <!-- Measure OUR code only. JasperFx/Wolverine ship PDBs alongside
+               their assemblies, so coverlet instruments them too: they
+               contributed 21,911 of 26,145 coverable lines (84%) at 23%
+               covered, dragging the reported total to 33.4% while the
+               CurrencyTracker.* assemblies actually sat at 86.6%. The 13.14
+               coverage gate never caught this because it never ran (see
+               _reusable-format.yml for the same root cause). -->
+          <Include>[CurrencyTracker.*]*</Include>
           <ExcludeByAttribute>Obsolete,GeneratedCodeAttribute,CompilerGeneratedAttribute</ExcludeByAttribute>
           <ExcludeByFile>**/*.g.cs,**/*.generated.cs</ExcludeByFile>
           <SkipAutoProps>true</SkipAutoProps>
