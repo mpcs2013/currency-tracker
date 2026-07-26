@@ -1,0 +1,32 @@
+# _reusable-format.yml — CSharpier + dotnet-format verification.
+# Steps lifted verbatim from the pre-14.28 ci.yml `ci` job (13.x lineage).
+name: _reusable-format
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  format:
+    name: format
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+
+      - name: Install CSharpier
+        run: dotnet tool install -g csharpier
+
+      - name: CSharpier check
+        run: csharpier --check .
+
+      - name: Format check
+        run: dotnet format --verify-no-changes --no-restore
