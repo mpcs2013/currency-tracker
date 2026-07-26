@@ -10,6 +10,12 @@ on:
   pull_request_review:
     types: [submitted]
 
+# Creating an issue that is assigned at the same time fires `opened` AND
+# `assigned`, starting two runs a second apart. Collapse them per issue/PR.
+concurrency:
+  group: claude-${{ github.event.issue.number || github.event.pull_request.number }}
+  cancel-in-progress: true
+
 jobs:
   claude:
     if: |
@@ -18,6 +24,7 @@ jobs:
       (github.event_name == 'pull_request_review' && contains(github.event.review.body, '@claude')) ||
       (github.event_name == 'issues' && (contains(github.event.issue.body, '@claude') || contains(github.event.issue.title, '@claude')))
     runs-on: ubuntu-latest
+    timeout-minutes: 30   # without this the job inherits the 360-minute default
     permissions:
       contents: read
       pull-requests: read

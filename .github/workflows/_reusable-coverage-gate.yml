@@ -1,0 +1,79 @@
+# _reusable-coverage-gate.yml — merge the raw Cobertura from every test job and
+# apply the 13.14 measured floor (floor = measured - 5; ratchet UP only).
+#
+# This lives in its own workflow because coverage is collected across three jobs
+# now: _reusable-test.yml (unit + architecture + Api integration) plus the two
+# isolated container suites. No single job sees the whole picture, so gating
+# inside any one of them would under-report and fail an honest build.
+#
+# The merge and gate steps are lifted verbatim from the pre-split
+# _reusable-test.yml — the reportgenerator invocation and the awk comparison are
+# unchanged, only their location moved. Callers: ci.yml, main-ci.yml.
+name: _reusable-coverage-gate
+
+on:
+  workflow_call:
+    inputs:
+      coverage-min:
+        description: Minimum line-coverage percentage (string, e.g. "58").
+        type: string
+        default: "58"
+
+permissions:
+  contents: read
+
+jobs:
+  coverage:
+    name: coverage
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      COVERAGE_MIN: ${{ inputs.coverage-min }}
+    steps:
+      # Every producer uploads `coverage-raw-*`; pattern-matching them means a
+      # future test job joins the gate just by following the naming convention.
+      - name: Download raw coverage
+        uses: actions/download-artifact@v7
+        with:
+          pattern: coverage-raw-*
+          path: coverage
+          merge-multiple: true
+
+      # A silent empty download would sail through reportgenerator and report a
+      # nonsense rate, so fail loudly instead.
+      - name: Verify artifacts arrived
+        shell: bash
+        run: |
+          count=$(find coverage -name 'coverage.cobertura.xml' | wc -l)
+          echo "Found $count raw Cobertura file(s)."
+          if [ "$count" -eq 0 ]; then
+            echo "::error::No coverage.cobertura.xml files downloaded — the gate cannot run."
+            exit 1
+          fi
+
+      - name: Merge coverage report
+        run: |
+          dotnet tool install -g dotnet-reportgenerator-globaltool
+          reportgenerator \
+            -reports:"coverage/**/coverage.cobertura.xml" \
+            -targetdir:"coverage/report" \
+            -reporttypes:"Cobertura;TextSummary;MarkdownSummaryGithub"
+
+      - name: Upload coverage artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: coverage-${{ github.run_id }}-${{ github.run_attempt }}
+          path: coverage/report
+          retention-days: 14
+
+      - name: Coverage gate
+        shell: bash
+        run: |
+          line_rate=$(python3 -c "import xml.etree.ElementTree as ET; print(ET.parse('coverage/report/Cobertura.xml').getroot().get('line-rate'))")
+          pct=$(python3 -c "print(round(float('$line_rate') * 100, 1))")
+          echo "Line coverage: ${pct}%  (floor: ${COVERAGE_MIN}%)"
+          echo "### Coverage: ${pct}% (floor ${COVERAGE_MIN}%)" >> "$GITHUB_STEP_SUMMARY"
+          awk "BEGIN { exit !($pct >= $COVERAGE_MIN) }" || {
+            echo "::error::Line coverage ${pct}% is below the floor of ${COVERAGE_MIN}%."
+            exit 1
+          }

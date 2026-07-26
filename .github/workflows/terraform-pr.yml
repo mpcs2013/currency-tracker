@@ -31,6 +31,7 @@ jobs:
     name: plan-comment
     needs: terraform
     runs-on: ubuntu-latest
+    timeout-minutes: 5   # without this the job inherits the 360-minute default
     permissions:
       pull-requests: write
     steps:
