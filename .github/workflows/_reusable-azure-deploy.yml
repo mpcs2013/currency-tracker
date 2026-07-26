@@ -1,0 +1,137 @@
+# _reusable-azure-deploy.yml — deploy one image tag to both Container Apps,
+# poll the new revisions to a verdict, smoke the Api. The pipeline half of
+# the 14.22/14.23 image treaty (Terraform's ignore_changes is the other).
+# strict=false until 14.E wires config (see Phase 14.D walkthrough).
+# Callers: deploy-uat.yml, deploy-prod.yml.
+name: _reusable-azure-deploy
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        description: GitHub Environment (uat | prod).
+        type: string
+        required: true
+      image-tag:
+        description: Image tag to deploy (the commit SHA).
+        type: string
+        required: true
+      strict:
+        description: Fail the run on an unhealthy revision or smoke failure.
+        type: boolean
+        default: false
+      http-smoke:
+        description: Run HTTP smoke against the Api FQDN (false for the
+          internal-LB PROD environment — the runner cannot reach it).
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: deploy (${{ inputs.environment }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    environment: ${{ inputs.environment }}
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Azure login (OIDC)
+        uses: azure/login@v3
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Deploy images and gate on revision health
+        shell: bash
+        env:
+          RG: ${{ vars.AZURE_RESOURCE_GROUP }}
+          TAG: ${{ inputs.image-tag }}
+          STRICT: ${{ inputs.strict }}
+        run: |
+          login_server=$(az acr list -g "$RG" --query "[0].loginServer" -o tsv)
+
+          verdict=0
+          for suffix in api worker; do
+            app=$(az containerapp list -g "$RG" \
+                    --query "[?ends_with(name, '-${suffix}')].name | [0]" -o tsv)
+            echo "::group::Deploy ${app} <- ${login_server}/${suffix}:${TAG}"
+            rev=$(az containerapp update -n "$app" -g "$RG" \
+                    --image "${login_server}/${suffix}:${TAG}" \
+                    --query properties.latestRevisionName -o tsv)
+            echo "New revision: ${rev}"
+
+            state="unknown"
+            for i in $(seq 1 30); do
+              state=$(az containerapp revision show -n "$app" -g "$RG" --revision "$rev" \
+                --query "{p:properties.provisioningState,h:properties.healthState,r:properties.runningState}" -o json)
+              echo "poll ${i}: ${state}"
+              if echo "$state" | grep -q '"p": "Provisioned"' \
+                 && echo "$state" | grep -Eq '"h": "(Healthy|None)"' \
+                 && echo "$state" | grep -Eq '"r": "(Running|RunningAtMaxScale)"'; then
+                echo "Revision ${rev} is up."
+                state="ok"; break
+              fi
+              if echo "$state" | grep -q '"p": "Failed"'; then break; fi
+              sleep 10
+            done
+
+            if [ "$state" != "ok" ]; then
+              verdict=1
+              echo "::warning::${app} revision ${rev} did not reach a healthy state: ${state}"
+            fi
+            echo "::endgroup::"
+          done
+
+          if [ "$verdict" -ne 0 ] && [ "$STRICT" = "true" ]; then
+            echo "::error::Deploy health gate failed (strict mode)."
+            exit 1
+          fi
+
+      - name: Post-deploy smoke (14.38)
+        if: inputs.http-smoke
+        shell: bash
+        env:
+          RG: ${{ vars.AZURE_RESOURCE_GROUP }}
+          STRICT: ${{ inputs.strict }}
+          SMOKE_TOKEN_RESOURCE: ${{ vars.SMOKE_TOKEN_RESOURCE }}
+        run: |
+          app=$(az containerapp list -g "$RG" --query "[?ends_with(name, '-api')].name | [0]" -o tsv)
+          fqdn=$(az containerapp show -n "$app" -g "$RG" \
+                   --query properties.configuration.ingress.fqdn -o tsv)
+          fail=0
+
+          smoke() {
+            local name="$1" url="$2" auth="$3"
+            local code
+            if [ -n "$auth" ]; then
+              code=$(curl -s -o /dev/null -w "%{http_code}" -H "Authorization: Bearer $auth" "$url")
+            else
+              code=$(curl -s -o /dev/null -w "%{http_code}" "$url")
+            fi
+            echo "smoke ${name}: ${url} -> ${code}"
+            if [ "$code" != "200" ]; then
+              fail=1
+              echo "::warning::smoke ${name} returned ${code} (expected 200)"
+            fi
+          }
+
+          smoke "live"  "https://${fqdn}/health/live"  ""
+          smoke "ready" "https://${fqdn}/health/ready" ""
+
+          if [ -n "$SMOKE_TOKEN_RESOURCE" ]; then
+            token=$(az account get-access-token --resource "$SMOKE_TOKEN_RESOURCE" \
+                      --query accessToken -o tsv)
+            smoke "rates" "https://${fqdn}/api/v1/rates/latest?base=USD&target=EUR" "$token"
+          else
+            echo "::notice::SMOKE_TOKEN_RESOURCE not set - authenticated smoke leg skipped (arrives with 14.E)."
+          fi
+
+          if [ "$fail" -ne 0 ] && [ "$STRICT" = "true" ]; then
+            echo "::error::Post-deploy smoke failed (strict mode)."
+            exit 1
+          fi
