@@ -1,0 +1,75 @@
+# _reusable-acr-push.yml — load the built tarball and push it to the
+# environment's ACR over the 14.A OIDC federation. No stored credential:
+# azure/login mints a short-lived token; az acr login exchanges it for a
+# registry token. Callers: main-ci.yml.
+name: _reusable-acr-push
+
+on:
+  workflow_call:
+    inputs:
+      image-name:
+        description: Bare image name (artifact "image-<name>" from 14.29).
+        type: string
+        required: true
+      tag:
+        description: Image tag (the commit SHA).
+        type: string
+        required: true
+      environment:
+        description: GitHub Environment supplying OIDC trust + AZURE_* vars.
+        type: string
+        required: true
+    outputs:
+      digest:
+        description: Manifest digest of the pushed image (sha256:...).
+        value: ${{ jobs.acr-push.outputs.digest }}
+
+permissions:
+  contents: read
+
+jobs:
+  acr-push:
+    name: acr-push (${{ inputs.image-name }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: ${{ inputs.environment }}
+    permissions:
+      contents: read
+      id-token: write        # mint the OIDC token azure/login exchanges
+    outputs:
+      digest: ${{ steps.push.outputs.digest }}
+    steps:
+      - name: Download image artifact
+        uses: actions/download-artifact@v7
+        with:
+          name: image-${{ inputs.image-name }}
+          path: /tmp
+
+      - name: Azure login (OIDC)
+        uses: azure/login@v3
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Push to ACR
+        id: push
+        shell: bash
+        run: |
+          acr_name=$(az acr list -g "${{ vars.AZURE_RESOURCE_GROUP }}" --query "[0].name" -o tsv)
+          login_server=$(az acr list -g "${{ vars.AZURE_RESOURCE_GROUP }}" --query "[0].loginServer" -o tsv)
+          echo "Pushing to ${login_server} (registry ${acr_name})"
+
+          docker load --input "/tmp/${{ inputs.image-name }}.tar"
+          docker tag "${{ inputs.image-name }}:${{ inputs.tag }}" \
+                     "${login_server}/${{ inputs.image-name }}:${{ inputs.tag }}"
+
+          az acr login --name "$acr_name"
+          docker push "${login_server}/${{ inputs.image-name }}:${{ inputs.tag }}"
+
+          digest=$(az acr manifest show-metadata \
+            --registry "$acr_name" \
+            --name "${{ inputs.image-name }}:${{ inputs.tag }}" \
+            --query digest -o tsv)
+          echo "digest=${digest}" >> "$GITHUB_OUTPUT"
+          echo "Pushed ${login_server}/${{ inputs.image-name }}@${digest}"
