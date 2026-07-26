@@ -10,7 +10,7 @@
         <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
         <AnalysisLevel>latest-recommended</AnalysisLevel>
         <AnalysisMode>AllEnabledByDefault</AnalysisMode>
-        <!-- Determinism -->
+        <!-- Determinism -->        
         <Deterministic>true</Deterministic>
         <ContinuousIntegrationBuild Condition="'$(GITHUB_ACTIONS)' == 'true'"
             >true</ContinuousIntegrationBuild>
