@@ -1,6 +1,25 @@
 # One hardened registry per environment. ACR names are GLOBAL DNS labels,
 # alphanumeric only (no hyphens) — hence the stripped prefix + random suffix.
 
+# Provider requirements for this directory. The root module pins the same
+# constraints in versions.tf; these are the floor a caller must satisfy, and
+# what tflint reads when --recursive lints this module as a standalone root.
+terraform {
+  required_version = ">= 1.15"
+
+  required_providers {
+    azurerm = {
+      source  = "hashicorp/azurerm"
+      version = "~> 4.0"
+    }
+
+    random = {
+      source  = "hashicorp/random"
+      version = "~> 3.0"
+    }
+  }
+}
+
 resource "random_string" "suffix" {
   length  = 4
   lower   = true

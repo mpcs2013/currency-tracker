@@ -1,7 +1,6 @@
 # PROD environment values. Resilience + perimeter: zone-redundant, private.
 # Contains NO secrets — secrets resolve from Key Vault (Phase 14.E).
 environment = "prod"
-location    = "switzerlandnorth"
 name_prefix = "ct-prod"
 
 tags = {

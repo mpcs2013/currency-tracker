@@ -1,6 +1,25 @@
 # Key Vault in RBAC mode. No access_policy block exists in this module, ever:
 # data-plane access is granted as RBAC in modules/role-assignments (14.24).
 
+# Provider requirements for this directory. The root module pins the same
+# constraints in versions.tf; these are the floor a caller must satisfy, and
+# what tflint reads when --recursive lints this module as a standalone root.
+terraform {
+  required_version = ">= 1.15"
+
+  required_providers {
+    azurerm = {
+      source  = "hashicorp/azurerm"
+      version = "~> 4.0"
+    }
+
+    random = {
+      source  = "hashicorp/random"
+      version = "~> 3.0"
+    }
+  }
+}
+
 data "azurerm_client_config" "current" {}
 
 resource "random_string" "suffix" {

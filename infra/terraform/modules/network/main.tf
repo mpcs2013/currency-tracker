@@ -3,6 +3,20 @@
 # overlap: /23 for Container Apps infrastructure (slots 0-1 of the /24 grid),
 # /24 for private endpoints (slot 2), /24 for VNet-injected Postgres (slot 3).
 
+# Provider requirements for this directory. The root module pins the same
+# constraints in versions.tf; these are the floor a caller must satisfy, and
+# what tflint reads when --recursive lints this module as a standalone root.
+terraform {
+  required_version = ">= 1.15"
+
+  required_providers {
+    azurerm = {
+      source  = "hashicorp/azurerm"
+      version = "~> 4.0"
+    }
+  }
+}
+
 locals {
   infrastructure_subnet_prefix   = cidrsubnet(var.vnet_address_space[0], 7, 0)
   private_endpoint_subnet_prefix = cidrsubnet(var.vnet_address_space[0], 8, 2)

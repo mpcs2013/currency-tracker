@@ -9,6 +9,25 @@
 # AMR is ONE resource: the database is a nested default_database block, not a
 # separate resource, and AMR permits exactly one of them.
 
+# Provider requirements for this directory. The root module pins the same
+# constraints in versions.tf; these are the floor a caller must satisfy, and
+# what tflint reads when --recursive lints this module as a standalone root.
+terraform {
+  required_version = ">= 1.15"
+
+  required_providers {
+    azurerm = {
+      source  = "hashicorp/azurerm"
+      version = "~> 4.0"
+    }
+
+    random = {
+      source  = "hashicorp/random"
+      version = "~> 3.0"
+    }
+  }
+}
+
 resource "random_string" "suffix" {
   length  = 4
   lower   = true

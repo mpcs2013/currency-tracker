@@ -2,6 +2,25 @@
 # exists in this file, in tfvars, or in state — password auth is OFF, and
 # access is exactly the Entra principals registered as administrators (14.24).
 
+# Provider requirements for this directory. The root module pins the same
+# constraints in versions.tf; these are the floor a caller must satisfy, and
+# what tflint reads when --recursive lints this module as a standalone root.
+terraform {
+  required_version = ">= 1.15"
+
+  required_providers {
+    azurerm = {
+      source  = "hashicorp/azurerm"
+      version = "~> 4.0"
+    }
+
+    random = {
+      source  = "hashicorp/random"
+      version = "~> 3.0"
+    }
+  }
+}
+
 data "azurerm_client_config" "current" {}
 
 resource "random_string" "suffix" {
