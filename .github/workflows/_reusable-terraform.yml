@@ -1,7 +1,7 @@
 # _reusable-terraform.yml — the enforced IaC gate (fmt/init/validate/
 # tflint/checkov/plan[/apply]) over ARM_* OIDC. The `environment` input
-# selects backend config, tfvars, OIDC trust, and AZURE_* vars TOGETHER
-# (the 14.B switch-together rule, encoded). An APPLY targets the `<env>`
+# selects backend config, tfvars, OIDC trust, AZURE_* vars, and the checkov
+# var-file TOGETHER (the 14.B switch-together rule, encoded). An APPLY targets the `<env>`
 # GitHub Environment; a PLAN targets `<env>-plan` — see the job-level note.
 # Callers: terraform-pr.yml, deploy-uat.yml, deploy-prod.yml.
 name: _reusable-terraform
@@ -95,10 +95,16 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}   # plugin download rate limits
 
+      # --var-file is not optional dressing: without it checkov renders an
+      # environment-less config where every env-driven value is unresolved, so
+      # it scans a shape that neither environment deploys. It reported Key Vault
+      # public access as FAILED while PROD had already disabled it, and never
+      # evaluated the subnets at all. Feeding it the same envelope Terraform
+      # gets is the switch-together rule applied to the scanner.
       - name: checkov
         run: |
           pipx install checkov
-          checkov -d . --quiet --compact
+          checkov -d . --var-file "envs/${{ inputs.environment }}/terraform.tfvars" --quiet --compact
 
       - name: plan
         id: plan
