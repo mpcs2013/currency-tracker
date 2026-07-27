@@ -42,15 +42,16 @@ public static class DependencyInjection
     /// </exception>
     public static IHostApplicationBuilder AddInfrastructure(this IHostApplicationBuilder builder)
     {
-        var connectionString =
-            builder.Configuration.GetConnectionString("currencytracker")
-            ?? throw new InvalidOperationException(
-                "The 'currencytracker' connection string is not configured. "
-                    + "Are you running through the Aspire AppHost?"
-            );
+        // 14.44 — one data source for the whole host, and the only place the
+        // connection string is read. Registered as a singleton so the container
+        // disposes it at shutdown: UseNpgsql(DbDataSource) treats the instance
+        // as externally owned and will not dispose it. In Azure this carries an
+        // Entra token password provider; locally it is Aspire's string, as-is.
+        var dataSource = ApplicationDataSource.Create(builder.Configuration);
+        builder.Services.AddSingleton(dataSource);
 
         builder.Services.AddDbContext<ApplicationDbContext>(options =>
-            options.UseNpgsql(connectionString).UseSnakeCaseNamingConvention()
+            options.UseNpgsql(dataSource).UseSnakeCaseNamingConvention()
         );
 
         // Redis distributed cache. The connection string is injected by the

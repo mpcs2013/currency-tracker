@@ -18,6 +18,9 @@
         <PackageVersion Include="Aspire.Hosting.Seq" Version="13.4.6" />
         <!-- Test -->
         <PackageVersion Include="Aspire.Hosting.Testing" Version="13.4.6" />
+        <!-- Infrastructure (14.44) — Entra tokens for the Postgres and Redis
+             data planes. ADR 0017. -->
+        <PackageVersion Include="Azure.Identity" Version="1.21.0" />
         <!-- Test -->
         <PackageVersion Include="coverlet.collector" Version="10.0.1" />
         <!-- Infrastructure -->
