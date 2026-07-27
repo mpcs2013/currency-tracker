@@ -47,7 +47,7 @@ graph LR
   Human[manual dispatch: image-tag] --> U[deploy-uat.yml]
   U --> UG[gate: verify tag exists in ACR]
   UG --> TFU[_reusable-terraform: uat, apply]
-  TFU --> DEPU[_reusable-azure-deploy: uat, strict=false]
+  TFU --> DEPU[_reusable-azure-deploy: uat, strict=true]
   DEPU --> UR[record 90d / notify on failure]
 
   Tag[git tag v*] --> P[deploy-prod.yml]
@@ -230,9 +230,13 @@ internal-LB and unreachable from hosted runners, so its verdict is revision
 health (ADR 0015), which is why `deploy-prod` passes `http-smoke: false`.
 
 1. `GET /health/live` — dependency-free by the 13.B tag contract.
-2. `GET /health/ready` — the dependency probe. Expected to fail until 14.E.
-3. `GET /api/v1/rates/latest?base=USD&target=EUR` with a bearer token — dormant
-   until `SMOKE_TOKEN_RESOURCE` exists (14.E).
+2. `GET /health/ready` — the dependency probe. Passes from 14.45, once both data
+   planes authenticate with Entra tokens.
+3. `GET /api/v1/rates/latest?base=USD&target=EUR` with a bearer token.
+   `SMOKE_TOKEN_RESOURCE` is set from 14.47; the leg still logs a `::notice::`
+   and skips until the API app registration exposes a role assignable to
+   `gh-deploy-uat` (see §Manual prerequisites — `AADSTS500011` is what a missing
+   one looks like).
 
 The third leg asserts the **payload**, not the status code: a 200 with an empty
 body is a load balancer, not a service, and behind a healthy gateway this path
@@ -244,22 +248,31 @@ tooling.
 
 Verdicts follow the strictness ladder below.
 
-## Seams — flipped by 14.E, in the change that makes passing possible
+## Seams — climbed in 14.E
 
 The Api fail-fasts at boot without its connection strings and authority (Phase
-8/11 discipline), so the first real deploys **cannot** be healthy. Pretending
-otherwise would either fake the gate or block the phase. The gate machinery
-lands now; its teeth arrive with the config.
+8/11 discipline), so the deploys 14.D shipped **could not** be healthy. The gate
+machinery landed first with its teeth retracted; 14.E supplied the config and
+flipped each flag in the change that made that rung passable.
 
-| Flag                    | Where                                  | Value now | Meaning                                                                        |
-| ----------------------- | -------------------------------------- | --------- | ------------------------------------------------------------------------------ |
-| `strict`                | deploy leaf → `_reusable-azure-deploy` | `false`   | health gate + smoke warn instead of fail                                        |
-| `health_probes_enabled` | root `main.tf` → app modules           | `false`   | platform probes off (readiness cannot pass without config)                     |
-| `SMOKE_TOKEN_RESOURCE`  | env-scoped variable                    | unset     | authenticated smoke leg dormant                                                |
+| Flag                    | Where                                  | Value now | Flipped in |
+| ----------------------- | -------------------------------------- | --------- | ---------- |
+| `health_probes_enabled` | root `main.tf` → the Api app module    | `true`    | 14.45      |
+| `strict`                | deploy leaf → `_reusable-azure-deploy` | `true`    | 14.47      |
+| `SMOKE_TOKEN_RESOURCE`  | `uat` environment variable             | set       | 14.47      |
 
-A **warned** run is a successful run under this ladder. That distinction matters
-for `notify`, which fires on `failure()` — a red job in `needs` — and therefore
-does not fire on a warnings-only deploy. Do not "improve" it to `!success()`,
+The order is not cosmetic. `health_probes_enabled` waits for 14.45 because
+`/health/ready` checks Postgres *and* Redis, so it could not pass until both
+data planes authenticated; `strict` waits for 14.47 because smoke leg 3 needs an
+Api that trusts Entra. A flag flipped early is a green light that means nothing;
+a flag flipped late is a gate you have stopped believing in.
+
+`health_probes_enabled` is Api-only by construction — the Worker has no ingress,
+no listener, and therefore no probe surface.
+
+A **warned** run is no longer a successful run: with `strict: true` an unhealthy
+revision or a failed smoke leg fails the job, which makes `notify`'s `failure()`
+condition meaningful for the first time. Do not "improve" it to `!success()`,
 which also matches cancelled and skipped chains.
 
 ---
@@ -276,7 +289,8 @@ them can succeed. Record values in [`docs/azure/bootstrap.md`](../azure/bootstra
 | `promotion_pull_principal_id` in `envs/uat/terraform.tfvars` | Terraform    | `deploy-prod` promote    | **pending** |
 | `SLACK_WEBHOOK_URL`                               | repo-level **secret**    | `notify` (both leaves)   | optional |
 | `NOTIFICATIONS_ENABLED`                           | repo-level **variable**  | `notify` kill-switch     | optional |
-| `SMOKE_TOKEN_RESOURCE`                            | `uat` env var            | smoke leg 3              | 14.E   |
+| `SMOKE_TOKEN_RESOURCE`                            | `uat` env var            | smoke leg 3              | 14.47 ✅ |
+| `user` app role on the API app registration, assigned to `gh-deploy-uat` + admin consent | Entra ID | smoke leg 3 | **pending** |
 
 The promotion pair:
 

@@ -30,3 +30,18 @@ postgres_sku_name = "GP_Standard_D2s_v3"
 # to imply — the SKU string no longer encodes it.
 redis_sku_name                  = "Balanced_B1"
 redis_high_availability_enabled = true
+
+# 14.43 — Entra ID as the Api's identity provider. Identifiers, not secrets;
+# see the UAT envelope for the full reasoning.
+#
+# REVIEW BEFORE THE FIRST PROD APPLY, like the Redis SKU above. These are the
+# SAME tenant and the SAME app registration UAT uses, because only one API app
+# registration exists today (docs/azure/bootstrap.md §App Registrations lists
+# the deploy identities, not this one). Sharing an audience across environments
+# means a UAT-issued token is accepted by PROD. That is tolerable while PROD has
+# never been applied and holds no data; it is not a steady state. When a
+# prod-only registration exists, this file is the only thing that changes — the
+# split costs two lines here and nothing in code, which is the whole point of
+# ADR 0010's config-only provider swap.
+api_authentication_authority = "https://login.microsoftonline.com/04b94fa0-2449-42e3-b19d-3275d586556a/v2.0" # gitleaks:allow
+api_authentication_audience  = "e50b769e-1b9e-487d-baf5-7108f98935f2"                                        # gitleaks:allow

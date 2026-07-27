@@ -182,8 +182,53 @@ module "container_app_api" {
   # problem. Reaches UAT via a deploy-uat dispatch; PROD on its first apply.
   use_acr_registry = true
 
+  # 14.45 — the platform probes come on now, and not one issue earlier. They
+  # target /health/live and /health/ready (Phase 13.B); readiness checks
+  # Postgres AND Redis, so it could not have passed before 14.44 and 14.45
+  # landed. Arming a probe against an endpoint that cannot succeed is how you
+  # teach a team to ignore a red probe. The Worker has no ingress, no listener
+  # and therefore no probe surface — this is Api-only by construction.
+  health_probes_enabled = true
+
+  # 14.43 — container-app secrets, resolved from Key Vault by THIS app's own
+  # system identity while the revision provisions. Terraform passes the URI;
+  # the value never enters an output, a workflow log, or this state file.
+  #
+  # FRESH ENVIRONMENT: leave this map empty for the first apply. The identity
+  # is minted by this resource and 14.24's Key Vault Secrets User grant needs
+  # it, so on a first apply the reference resolves before the grant exists and
+  # the revision fails with "Unable to get value using Managed identity".
+  # Apply once empty, then again populated — the same bootstrap ordering as
+  # use_acr_registry, and the reason PROD's first apply is two passes.
+  key_vault_secrets = {
+    "connectionstrings-currencytracker" = module.keyvault.secret_versionless_ids["api-connectionstrings-currencytracker"]
+    "connectionstrings-cache"           = module.keyvault.secret_versionless_ids["connectionstrings-cache"]
+  }
+
+  # The env var names are the double-underscore form of the configuration keys
+  # Phase 8 and Phase 10 read: ConnectionStrings:currencytracker and :cache.
+  # The container-app secret names are deliberately identical across both apps
+  # even though the vault secrets differ — the app-side name is the app's
+  # contract, the vault-side name is the vault's inventory.
+  secret_env_vars = {
+    "ConnectionStrings__currencytracker" = "connectionstrings-currencytracker"
+    "ConnectionStrings__cache"           = "connectionstrings-cache"
+  }
+
+  # Non-secret configuration: identifiers and switches only.
   env_vars = {
-    ASPNETCORE_ENVIRONMENT = var.environment == "prod" ? "Production" : "Staging"
+    # 14.47 collapses the UAT/PROD split — UAT rehearses PROD, so it loads the
+    # same appsettings profile. The environments differ by resource group,
+    # name_prefix, state key, ACR and OIDC subject, not by profile name.
+    ASPNETCORE_ENVIRONMENT = "Production"
+
+    # 14.44/14.45 read this. It ships ahead of the code that consumes it: an
+    # env var nothing reads is inert, whereas code reading a missing var is a
+    # boot failure. Config before code is the safe ordering.
+    Azure__UseManagedIdentity = "true"
+
+    Authentication__Authority = var.api_authentication_authority
+    Authentication__Audience  = var.api_authentication_audience
   }
 
   tags = local.common_tags
@@ -202,8 +247,26 @@ module "container_app_worker" {
   # 14.35: same flip as the Api — see that block's note.
   use_acr_registry = true
 
+  # 14.43 — same shape as the Api, different Postgres role: the Worker
+  # authenticates as ca-worker-identity. The cache secret is here because
+  # AddInfrastructure() fail-fasts on a missing ConnectionStrings__cache in
+  # BOTH hosts — but the Worker holds no Redis grant (14.24 is Api-only,
+  # deliberately) and never opens a cache connection, so the value is present
+  # and never used. 14.45's lazy ConnectionMultiplexerFactory is what makes
+  # that asymmetry survivable rather than a boot failure.
+  key_vault_secrets = {
+    "connectionstrings-currencytracker" = module.keyvault.secret_versionless_ids["worker-connectionstrings-currencytracker"]
+    "connectionstrings-cache"           = module.keyvault.secret_versionless_ids["connectionstrings-cache"]
+  }
+
+  secret_env_vars = {
+    "ConnectionStrings__currencytracker" = "connectionstrings-currencytracker"
+    "ConnectionStrings__cache"           = "connectionstrings-cache"
+  }
+
   env_vars = {
-    DOTNET_ENVIRONMENT = var.environment == "prod" ? "Production" : "Staging"
+    DOTNET_ENVIRONMENT        = "Production"
+    Azure__UseManagedIdentity = "true"
   }
 
   tags = local.common_tags
