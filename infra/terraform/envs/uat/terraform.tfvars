@@ -1,7 +1,6 @@
 # UAT environment values. Cost-leaning: single-zone, public access + firewall.
 # Contains NO secrets — secrets resolve from Key Vault (Phase 14.E).
 environment = "uat"
-location    = "switzerlandnorth"
 name_prefix = "ct-uat"
 
 tags = {
