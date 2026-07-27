@@ -167,3 +167,46 @@ jobs:
         uses: actions/dependency-review-action@v5
         with:
           config-file: ./.github/dependency-review-config.yml
+
+  # The one required check on `main`, and the only job here whose reported name
+  # is stable. Every other job above reports under a name that depends on
+  # whether it ran: a reusable caller that runs reports as `ci / test`, the same
+  # caller skipped reports as bare `ci`. Branch protection matches by exact
+  # string, so whichever spelling is required, the other never reports — and a
+  # required check that never reports waits forever (pipelines.md §Gates already
+  # wrote that trap down; PR #388 is where it bit). An infra-only or doc-only PR
+  # skips all six .NET jobs by design, and was therefore unmergeable.
+  #
+  # A plain job with `if: always()` has neither problem: one name, reported on
+  # every run. It re-tests nothing — it only reads what the jobs above concluded.
+  ci-gate:
+    name: ci-gate
+    needs:
+      - changes
+      - format
+      - ci
+      - codeql
+      - aspire-smoke
+      - infrastructure-integration-tests
+      - coverage
+      - gitleaks
+      - dependency-review
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - name: Verify no upstream job failed
+        shell: bash
+        env:
+          NEEDS: ${{ toJSON(needs) }}
+        run: |
+          echo "$NEEDS"
+          # `skipped` is a pass: it is the intended outcome of the `changes`
+          # filter on a doc-only or infra-only diff, and of the two PR-only
+          # scanners on a push to main. Only failure and cancellation are red.
+          if echo "$NEEDS" | jq -e 'to_entries | any(.value.result == "failure" or .value.result == "cancelled")' > /dev/null; then
+            echo "::error::At least one CI job failed or was cancelled."
+            exit 1
+          fi
