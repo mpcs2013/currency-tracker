@@ -2,6 +2,7 @@ using System.Diagnostics;
 using CurrencyTracker.Api;
 using CurrencyTracker.Api.ErrorHandling;
 using CurrencyTracker.Api.Health;
+using CurrencyTracker.Api.Security; // AuthenticationProviderGuard (14.47)
 using CurrencyTracker.Application;
 using CurrencyTracker.Application.Abstractions.Notifications;
 using CurrencyTracker.Application.Abstractions.Persistence;
@@ -106,6 +107,17 @@ if (string.IsNullOrWhiteSpace(authAudience))
             + "integration tests) must set it explicitly."
     );
 }
+
+// 14.47 — the declared provider must agree with the authority we were handed.
+// Not a provider switch (ADR 0010): the pipeline below still names no IdP. This
+// is what stops Authentication:Provider from being decorative — without it a
+// stale authority boots green, passes both health probes, and then rejects
+// every token with a generic issuer-validation failure.
+AuthenticationProviderGuard.Validate(
+    builder.Configuration["Authentication:Provider"],
+    authAuthority
+);
+
 builder
     .Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
