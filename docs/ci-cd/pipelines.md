@@ -139,7 +139,7 @@ filter. Adding, renaming or removing a job in `ci.yml` now means editing that
 | `ci.yml` (PR)   | the PR                    | fix the branch                                                              |
 | `terraform-pr`  | nothing (advisory)        | fix before merge anyway — the apply that hits this plan is `deploy-uat`'s    |
 | `main-ci`       | UAT deploy of that commit | roll forward on `main`; no environment regressed                            |
-| `deploy-uat`    | UAT convergence           | re-dispatch after diagnosis; UAT still serves the previous revision         |
+| `deploy-uat`    | UAT convergence           | re-dispatch after diagnosis; UAT still serves the previous revision — step-by-step in the [UAT deploy runbook](uat-deploy-runbook.md) |
 | `deploy-prod`   | the release               | fix, re-tag; PROD still serves the previous revision                        |
 
 ---
@@ -334,6 +334,9 @@ Where this implementation departs from the Phase 14.D plan, and why.
 
 ## Related
 
+- [`uat-deploy-runbook.md`](uat-deploy-runbook.md) — the operator's procedure for
+  a UAT deploy: pre-flight, the two approval holds, troubleshooting, rollback.
+  This file is the graph; that one is the steps.
 - [`docs/azure/bootstrap.md`](../azure/bootstrap.md) — identity model, grants, environment variables.
 - [ADR 0015](../decisions/0015-deploy-topology.md) — deploy topology and digest promotion.
 - [ADR 0014](../decisions/0014-OIDC-posture.md) — the OIDC identity posture the deploy identities sit inside.
