@@ -182,6 +182,14 @@ module "container_app_api" {
   # problem. Reaches UAT via a deploy-uat dispatch; PROD on its first apply.
   use_acr_registry = true
 
+  # 14.45 — the platform probes come on now, and not one issue earlier. They
+  # target /health/live and /health/ready (Phase 13.B); readiness checks
+  # Postgres AND Redis, so it could not have passed before 14.44 and 14.45
+  # landed. Arming a probe against an endpoint that cannot succeed is how you
+  # teach a team to ignore a red probe. The Worker has no ingress, no listener
+  # and therefore no probe surface — this is Api-only by construction.
+  health_probes_enabled = true
+
   # 14.43 — container-app secrets, resolved from Key Vault by THIS app's own
   # system identity while the revision provisions. Terraform passes the URI;
   # the value never enters an output, a workflow log, or this state file.
