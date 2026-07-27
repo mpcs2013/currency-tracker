@@ -144,6 +144,8 @@ No schema change is needed — rates are stored by code, not column.
   the right skill, agent or command.
 - `SKILLS.md` — the `.claude/` setup: what each skill, agent and command does,
   what was deliberately not built, and how to add or retire one.
+- `docs/agents/reference.md` — the detailed per-artifact reference behind
+  `SKILLS.md`.
 - `docs/workflow.md` — the eight-step per-issue loop.
 - `docs/prompts.md` — paste-ready prompts for runtimes without an invocation
   mechanism (plain Claude chat, Copilot, Cursor).

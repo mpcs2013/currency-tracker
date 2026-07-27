@@ -2,8 +2,13 @@
 
 How agent behaviour is configured in this repo: what exists, when each piece
 fires, why it exists, and — just as important — **what was deliberately not
-built**. ADR [0016](docs/decisions/0016-agent-configuration-in-claude-dir.md) is
-the decision record; this file is the working reference.
+built**.
+
+This file is the **one-page index**. For per-artifact detail — full frontmatter,
+what each body covers and refuses, the verification commands — see
+[`docs/agents/reference.md`](docs/agents/reference.md). ADR
+[0016](docs/decisions/0016-agent-configuration-in-claude-dir.md) is the decision
+record.
 
 ## Document topology
 
@@ -193,6 +198,7 @@ Two things that will waste your time if you rewrite it:
 
 ## Related
 
+- [`docs/agents/reference.md`](docs/agents/reference.md) — per-artifact detail: frontmatter, coverage, refusals, verification.
 - [`AGENTS.md`](AGENTS.md) — canonical conventions; §Don't holds the protected-file list.
 - [`CLAUDE.md`](CLAUDE.md) — the routing table.
 - [`docs/workflow.md`](docs/workflow.md) — the eight-step per-issue loop.
