@@ -19,43 +19,67 @@ does not do](#what-this-pipeline-deliberately-does-not-do).
 
 Four conditions decide whether a dispatch can succeed.
 
-### Blocking: the `user` app role is not assigned to `gh-deploy-uat`
+### Blocking: `MSApi` is not configured as an API
 
 Smoke leg 3 requests a token for `SMOKE_TOKEN_RESOURCE` and calls
 `/api/v1/rates/latest`. That variable **is** set on the `uat` environment, so the
-leg runs. Without the app role the token carries no role, the Api refuses the
-request, the payload assertion fails — and because `deploy-uat.yml` sets
-`strict: true`, a failed smoke leg is a **failed deploy**, not a warning.
+leg runs — and because `deploy-uat.yml` sets `strict: true`, a failed smoke leg
+is a **failed deploy**, not a warning. It fails at the *last* step, after
+Terraform has applied and both apps have been updated.
 
-It fails at the *last* step, after Terraform has applied and both apps have been
-updated. Resolve it before the first dispatch.
+No token can be issued for this API today. Verified by trying it:
 
-Listed as **pending** in [`pipelines.md`](pipelines.md) §Manual prerequisites.
-
-```bash
-# 1. The API app registration's appRole id for "user"
-az ad app show --id e50b769e-1b9e-487d-baf5-7108f98935f2 \
-  --query "appRoles[?value=='user'].{value:value,id:id}" -o table
-
-# 2. Object ids: the API's service principal, and gh-deploy-uat's
-az ad sp list --filter "appId eq 'e50b769e-1b9e-487d-baf5-7108f98935f2'" --query "[0].id" -o tsv
-az ad sp list --display-name gh-deploy-uat --query "[0].id" -o tsv
-
-# 3. What gh-deploy-uat already holds (empty output = the role is missing)
-az rest --method GET \
-  --url "https://graph.microsoft.com/v1.0/servicePrincipals/<gh-deploy-uat-sp-id>/appRoleAssignments"
-
-# 4. Grant it. Needs an admin; this is the mutating step.
-az rest --method POST \
-  --url "https://graph.microsoft.com/v1.0/servicePrincipals/<gh-deploy-uat-sp-id>/appRoleAssignments" \
-  --headers "Content-Type=application/json" \
-  --body '{"principalId":"<gh-deploy-uat-sp-id>","resourceId":"<api-sp-object-id>","appRoleId":"<user-role-id>"}'
+```
+az account get-access-token --resource e50b769e-1b9e-487d-baf5-7108f98935f2
+→ AADSTS65001: The user or administrator has not consented to use the
+  application with ID '04b07795-...' named 'Microsoft Azure CLI'.
 ```
 
-These are written from the identity values recorded in
-[`../azure/bootstrap.md`](../azure/bootstrap.md), not from a successful run. An
-app-role grant is a tenant change with an admin-consent step — read each command
-before running it.
+App registration `MSApi` was created bare: no `identifierUris`, no
+`oauth2PermissionScopes`, no `preAuthorizedApplications`, and
+`requestedAccessTokenVersion` unset (which means **v1**). Two independent
+blockers — nothing to request a token *for*, and the wrong token version even if
+there were. `Program.cs` sets `ValidIssuer = authAuthority`, an exact match
+against `…/v2.0`, so a v1 token's `sts.windows.net` issuer 401s before the
+audience is even examined.
+
+The four settings, and the ordering trap in applying them, are in
+[`../azure/bootstrap.md`](../azure/bootstrap.md) §MSApi. Object id
+`6424a67b-d03b-4174-a7a7-f86e5b754bd3`.
+
+Once applied, this is the call — `--scope` (v2), never `--resource` (v1):
+
+```powershell
+$token = az account get-access-token `
+  --scope "api://e50b769e-1b9e-487d-baf5-7108f98935f2/access_as_user" `
+  --query accessToken -o tsv
+
+$fqdn = az containerapp show -n ca-ct-uat-api -g rg-currencytracker-uat `
+  --query properties.configuration.ingress.fqdn -o tsv
+
+Invoke-RestMethod -Uri "https://$fqdn/api/v1/rates/latest?base=USD&target=EUR" `
+  -Headers @{ Authorization = "Bearer $token" }
+```
+
+On a 401, decode the token before suspecting the Api. Only two claims decide it:
+`iss` must end `/v2.0`, and `aud` must equal the bare GUID that
+`Authentication__Audience` carries.
+
+```powershell
+$p = $token.Split('.')[1].Replace('-','+').Replace('_','/')
+$p = $p.PadRight($p.Length + (4 - $p.Length % 4) % 4, '=')
+[Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($p)) | ConvertFrom-Json |
+  Select-Object iss, aud, scp, roles, preferred_username
+```
+
+> **This section previously named the wrong cause.** It said smoke leg 3 was
+> blocked by a pending `user` app role assigned to `gh-deploy-uat`, inherited
+> from [`pipelines.md`](pipelines.md) §Manual prerequisites. `MSApi` defines no
+> app roles at all, so there was nothing to assign — and this endpoint needs no
+> role: `RequireAuthorizeOnAll()` applies the default authenticated-user policy,
+> and only `AdminIngestEndpoint` requires `admin`. The `user` / `admin` roles
+> [`../auth.md`](../auth.md) recommends are still worth having for the admin
+> endpoint; they were simply never what blocked this.
 
 ### The other three
 
@@ -249,9 +273,12 @@ the run cleanly and leaves the environment untouched.
 | `azure/login` fails (AADSTS700213 etc.) | Federated credential subject mismatch | Compare against `repo:mpcs2013/currency-tracker:environment:uat` on `gh-deploy-uat` |
 | Terraform apply fails on a lock | A previous run died mid-apply | Inspect before forcing — the lock lives in the `stcurrencytrackertfstate` backend |
 | Revision never reaches a healthy state | The app is fail-fasting at boot on missing config | `az containerapp logs show -n ca-ct-uat-api -g rg-currencytracker-uat --type console --tail 200` |
+| Stuck `Activating`, `h: "None"`, and **console logs show a clean start with no errors** | A readiness dependency is dropping connections, not refusing them. Nothing logs because nothing fails — it never answers. Check the **system** log for `Probe of Readiness failed with timeout` | `az containerapp logs show -n ca-ct-uat-api -g rg-currencytracker-uat --type system --tail 30` |
+| …and the dependency is Postgres | A public Flexible Server with an **empty** firewall rule list denies everything. Cost two deploys on 2026-07-27 | `az rest --method GET --url "https://management.azure.com/subscriptions/<sub>/resourceGroups/rg-currencytracker-uat/providers/Microsoft.DBforPostgreSQL/flexibleServers/<server>/firewallRules?api-version=2024-08-01"` |
 | Provisioned but not running | Image pull, or the platform rejected the revision | `az containerapp logs show -n ca-ct-uat-api -g rg-currencytracker-uat --type system --tail 100` |
 | `/health/live` 200 but `/health/ready` 503 | Postgres or Redis data-plane auth | `az containerapp revision list -n ca-ct-uat-api -g rg-currencytracker-uat -o table` |
-| Smoke rates leg 401 / 403 / wrong payload | **The pending `user` app role** — see §0 | `az account get-access-token --resource $env:SMOKE_TOKEN_RESOURCE --query accessToken -o tsv` |
+| Smoke rates leg 401 / `AADSTS65001` | **`MSApi` not configured as an API** — see §0 | `az account get-access-token --scope "api://e50b769e-1b9e-487d-baf5-7108f98935f2/access_as_user" --query accessToken -o tsv` |
+| Smoke rates leg 401 with a token in hand | Token is v1, or the wrong audience | Decode it — `iss` must end `/v2.0`, `aud` must be the bare GUID (§0) |
 | Green deploy but the image did not change | Expected. Terraform `ignore_changes` the image; only the pipeline moves it | `az containerapp show -n ca-ct-uat-api -g rg-currencytracker-uat --query "properties.template.containers[0].image" -o tsv` |
 | A second dispatch queues behind the first | Working as designed — `concurrency: deploy-uat`, `cancel-in-progress: false` | Wait. Deploys serialise so a half-applied environment is never abandoned |
 

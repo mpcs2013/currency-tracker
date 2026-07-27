@@ -29,6 +29,53 @@ misleading `SubscriptionNotFound`: `Microsoft.Storage`, `Microsoft.KeyVault`,
 | gh-deploy-uat   | `c21f81b0-c5fe-4854-bc53-e88e913f59d3`  | `b011b5ac-1da4-4986-920e-6c5f29271e33`	| created           |
 | gh-deploy-prod  | `4fbd780a-9e9f-41c9-bed2-98d3509d0aa1`  | `b99eedea-11b9-4817-8141-1e1f7625e055`	| created           |
 
+### MSApi — the API app registration the Api validates tokens against
+
+Not a deploy identity. This is the resource `Authentication__Audience` names and
+the audience `SMOKE_TOKEN_RESOURCE` requests a token for.
+
+| Field | Value |
+| ----- | ----- |
+| App (client) ID | `e50b769e-1b9e-487d-baf5-7108f98935f2` |
+| Object ID       | `6424a67b-d03b-4174-a7a7-f86e5b754bd3` |
+| Service principal object ID | `6424a67b-d03b-4174-a7a7-f86e5b754bd3` |
+| `appRoleAssignmentRequired` | `false` |
+
+**It shipped bare and must be configured before any authenticated call
+succeeds** — discovered 2026-07-27 while trying to call
+`/api/v1/rates/latest` by hand. As created it had no `identifierUris`, no
+`oauth2PermissionScopes`, no `preAuthorizedApplications`, no `appRoles`, and
+`requestedAccessTokenVersion` unset:
+
+| Setting | Required value | Why |
+| ------- | -------------- | --- |
+| `identifierUris` | `["api://e50b769e-1b9e-487d-baf5-7108f98935f2"]` | Something for a client to request a token *for*. |
+| `api.requestedAccessTokenVersion` | `2` | **The one that is not optional.** Unset means v1, whose issuer is `https://sts.windows.net/<tid>/`. `Program.cs` sets `ValidIssuer = authAuthority`, an exact match against `https://login.microsoftonline.com/<tid>/v2.0`, so a v1 token 401s on issuer before audience is even examined. |
+| `api.oauth2PermissionScopes` | one scope, `access_as_user` | Without a scope there is nothing to consent to, and every token request fails `AADSTS65001`. |
+| `api.preAuthorizedApplications` | Azure CLI `04b07795-8ddb-461a-bbee-02f9e1bf7b46` | Lets `az account get-access-token` mint a token non-interactively, for smoke and for humans. |
+
+A `PATCH` to `api` replaces the whole object, so set the scope and the
+pre-authorized app in that order and reuse the same scope `id` in both calls —
+the second call otherwise silently erases the first.
+
+Fetching a token afterwards:
+
+```powershell
+az account get-access-token `
+  --scope "api://e50b769e-1b9e-487d-baf5-7108f98935f2/access_as_user" `
+  --query accessToken -o tsv
+```
+
+`--scope` is the v2 form. `--resource` requests a v1 token and will fail issuer
+validation no matter what else is correct.
+
+**No app roles are defined, and the read paths do not need any.**
+`Program.cs`'s `MapWolverineEndpoints(opts => opts.RequireAuthorizeOnAll())`
+applies the default policy — authenticated user, no role. Only
+`AdminIngestEndpoint` carries `[Authorize(Policy = "admin")]`, so the `user` /
+`admin` roles that [`docs/auth.md`](../auth.md) recommends are needed for the
+admin endpoint and nothing else. They are **not** a prerequisite for smoke.
+
 ## Federated credentials (14.2) — issuer `https://token.actions.githubusercontent.com`, audience `api://AzureADTokenExchange`
 | App             | Credential name  | Subject                                                     |
 | --------------- | ---------------- | ----------------------------------------------------------- |
