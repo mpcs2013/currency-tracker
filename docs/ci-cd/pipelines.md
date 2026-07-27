@@ -24,6 +24,11 @@ graph LR
   II --> COV
   PR --> GL[gitleaks]
   PR --> DR[dependency-review]
+  F --> CG[ci-gate: the only required check]
+  Q --> CG
+  COV --> CG
+  GL --> CG
+  DR --> CG
 
   PRI[pull_request on infra/**] --> TFPR[terraform-pr.yml]
   TFPR --> TFU0[_reusable-terraform: uat, plan only]
@@ -71,16 +76,31 @@ list is a copy — refresh with the command below when it changes):
 gh api repos/mpcs2013/currency-tracker/branches/main/protection/required_status_checks --jq ".contexts"
 ```
 
-`ci / test` · `coverage / coverage` · `format / format` · `codeql / codeql` ·
-`aspire-smoke / integration` · `infrastructure-integration-tests / integration` ·
-`gitleaks` · `dependency-review`
+`ci-gate` · `gitleaks` · `dependency-review`
 
-Note the `caller / callee` form. When a job calls a reusable workflow, GitHub
-reports the check under that composite name and the bare name stops existing.
-Branch protection matches by exact string, and a required check that nothing
-reports does not fail — it **waits forever**, blocking every subsequent PR with
-"Expected — waiting for status". Any change that converts a job to a reusable
-caller, or removes one, must swap the required-check names in the same sitting.
+**One aggregate check, not six named ones.** The list used to name each job
+directly — `ci / test`, `coverage / coverage`, `format / format`,
+`codeql / codeql`, `aspire-smoke / integration`,
+`infrastructure-integration-tests / integration` — and that could not survive the
+`changes` filter. When a job calls a reusable workflow, GitHub reports the check
+under the composite `caller / callee` name and the bare name stops existing;
+when that same job is **skipped**, the composite never appears and the check is
+reported under the bare `ci` instead. Branch protection matches by exact string,
+so whichever spelling is required, the other case reports nothing — and a
+required check that nothing reports does not fail, it **waits forever** with
+"Expected — waiting for status".
+
+That is exactly what an infra-only or doc-only PR does: `changes` emits
+`code=false`, all six .NET jobs skip on purpose, none of the six required
+composite names is ever reported, and the PR cannot be merged by anyone but an
+admin. PR #388 (`infra/**` only) is where it surfaced.
+
+`ci-gate` is the fix: a plain job — not a reusable caller, so no composite name —
+with `if: always()` and `needs:` on every other job in `ci.yml`. It reports under
+one name on every run, and fails only if something upstream **failed or was
+cancelled**; `skipped` is a pass, because skipping is the intended outcome of the
+filter. Adding, renaming or removing a job in `ci.yml` now means editing that
+`needs:` list, and never touching branch protection.
 
 - **PRs** are gated by `ci.yml` (the list above), plus `terraform-pr.yml` on
   `infra/**` changes — which is **advisory**, not required. Required-check
@@ -276,6 +296,7 @@ Where this implementation departs from the Phase 14.D plan, and why.
 | 14.28/14.35 | `_reusable-build.yml` as a build gate, called by `ci.yml` and `main-ci.yml` | **deleted** | Its restore + `dotnet build -c Release` is byte-identical to `_reusable-test.yml`'s first three steps, and the images compile from source in their own Dockerfiles. After the de-duplication it had zero callers; an uncalled reusable is the anti-pattern the library rule exists to prevent. |
 | 14.28 | `_reusable-test.yml` runs the whole solution and owns the coverage floor | **split three ways** | Container suites raced on Testcontainers ports when run alongside everything else; the floor moved to `_reusable-coverage-gate.yml` because no single job now sees all the coverage. |
 | 14.40 | Required list includes `build / build` | **`coverage / coverage`** | Follows from the two rows above. Swapped in the branch-protection API in the same change. |
+| 14.40 | Required list names each job individually | **one `ci-gate` aggregate** | Naming jobs directly cannot survive the `changes` filter: a skipped reusable caller reports its bare name and never the composite the list requires, so every infra-only or doc-only PR waited forever on six checks that would never arrive (PR #388). `ci-gate` is a plain `if: always()` job that reports one name in both cases. Swapped in the branch-protection API in the same change. |
 | 14.29 | `_reusable-docker-build.yml` takes a `push` input | dropped | Pushing is `_reusable-acr-push.yml`'s single responsibility; a `push` input here would let a caller bypass the Trivy gate. |
 | 14.26 | Dockerfile `HEALTHCHECK` | omitted | Container Apps ignores it, and the chiseled base ships no shell or curl to run one. Health is the platform probe seam. |
 | 14.39 | `SLACK_WEBHOOK_URL` env-scoped | repo-level secret | See above — an approval gate in front of a failure alert is backwards. |
