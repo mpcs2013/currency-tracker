@@ -1,6 +1,11 @@
 # terraform-pr.yml — leaf: IaC PR feedback. Full 14.32 gate (apply:false,
 # UAT — see docs/ci-cd/pipelines.md for the UAT-only rationale) + the plan
 # upserted as a sticky PR comment.
+#
+# apply:false is what routes this to the `uat-plan` GitHub Environment rather
+# than `uat`, whose deployment-branch policy is main-only and would refuse a PR
+# branch outright. Keep it false: flipping it here would both apply from a PR
+# head and fail, since `uat-plan`'s credential is not what `uat` trusts.
 name: terraform-pr
 
 on:
