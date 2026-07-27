@@ -54,9 +54,9 @@ misleading `SubscriptionNotFound`: `Microsoft.Storage`, `Microsoft.KeyVault`,
 | gh-deploy-prod  | Contributor | `rg-currencytracker-prod` only |
 
 No subscription-scope or Owner assignment. Data-plane roles for the app's
-managed identity (AcrPull, KV Secrets User, etc.) are separate — 14.24. The
-**deploy identities' data-plane access to the *state* account** is separate too,
-and is recorded in the next section.
+managed identity (AcrPull, KV Secrets User, etc.) are separate — 14.24. 
+The deploy identities' data-plane access is separate too — to the state account, 
+and (from 14.42) to each environment's Key Vault — and is recorded in the two sections below.
 
 Granted 2026-07-26 (14.32). Recorded assignment IDs (the `name` GUID is the
 assignment itself; `principalId` is the **service principal's** object ID —
@@ -125,6 +125,88 @@ role lands. Re-register these grants in a clean tenant (14.59).
 > The gap surfaced on the first `terraform init` of 14.B (`403
 > AuthorizationPermissionMismatch`); this section is the fix, recorded for
 > reproducibility.
+
+## Key Vault data-plane access (RBAC) — required for `azurerm_key_vault_secret` (14.42)
+
+`modules/keyvault` (14.19) creates the vault in **RBAC authorization mode**
+(`rbac_authorization_enabled = true`), which splits management plane from data
+plane. The control-plane `Contributor` in the 14.5 table lets the deploy
+identity *create and configure* a vault; it does **not** let it write a secret.
+From 14.42 the root module writes three connection strings as
+`azurerm_key_vault_secret` resources, which are data-plane calls — so any
+identity that runs `terraform apply` fails with
+`403 … does not have secrets set permission on key vault` until it holds
+`Key Vault Secrets Officer` on that environment's vault.
+
+| Identity            | Role                      | Scope                          | Status                        |
+| ------------------- | ------------------------- | ------------------------------ | ----------------------------- |
+| gh-deploy-uat (SP)  | Key Vault Secrets Officer | `kv-ct-uat-0pjb` only          | granted 2026-07-27            |
+| gh-deploy-prod (SP) | Key Vault Secrets Officer | PROD vault only                | **pending** — vault not created yet |
+
+Granted 2026-07-27 (14.42). Recorded assignment ID (`principalId` is the
+**service principal's** object ID, as in the 14.5 table):
+
+| Identity      | SP object ID (`principalId`)           | Role-assignment ID                     |
+| ------------- | -------------------------------------- | -------------------------------------- |
+| gh-deploy-uat | `176ad327-50b8-4e32-a83b-9fc5f0d8315f` | `1b9a5451-58d1-45dc-af7e-602da11f05a4` |
+
+Scoped to
+`.../resourceGroups/rg-currencytracker-uat/providers/Microsoft.KeyVault/vaults/kv-ct-uat-0pjb`
+(role definition `b86a8fe4-44ce-4948-aee5-eccb2c155cd7`, Key Vault Secrets
+Officer).
+
+**The vault name carries a `random_string` suffix**, so it differs per
+environment and is regenerated if the vault is ever destroyed and recreated.
+Resolve it rather than typing it, and re-record the assignment ID afterwards:
+
+```powershell
+$rg   = "rg-currencytracker-uat"      # or rg-currencytracker-prod
+$kv   = az keyvault list -g $rg --query "[0].id" -o tsv
+$spId = az ad sp list --display-name gh-deploy-uat --query "[0].id" -o tsv
+
+az role assignment create `
+  --assignee-object-id $spId `
+  --assignee-principal-type ServicePrincipal `
+  --role "Key Vault Secrets Officer" `
+  --scope $kv
+
+# Verify from the grantee's point of view:
+az role assignment list --assignee $spId --scope $kv --query "[].roleDefinitionName" -o tsv
+# Key Vault Secrets Officer
+```
+
+`az ad sp list` returns the **service principal's** object ID. The App
+Registration's object ID (14.1 table) is a different GUID and produces a role
+assignment that silently grants nothing useful.
+
+**PROD is a two-pass first apply.** The grant needs the vault, the vault is
+created by Terraform, and the same apply then tries to write secrets into it.
+PROD's first `terraform apply` (through `deploy-prod.yml`'s gated `terraform`
+job — never a local shell) will therefore create the vault and fail on the
+secret write. Make the grant above against the newly-created PROD vault, then
+re-run the job. The `terraform` job is separately re-runnable behind its own
+approval, so this is a supported motion rather than a recovery.
+
+> **Why this is bootstrap and not IaC.** An `azurerm_role_assignment` granting
+> `data.azurerm_client_config.current.object_id` the officer role would work,
+> and is wrong twice. A principal that can grant itself data-plane access is
+> not restricted by that grant — encoding it in the plan that consumes it turns
+> a permission boundary into a formality. And a self-grant used in the same
+> apply races Entra replication, producing the "first apply 403s, second
+> succeeds" flake that a `time_sleep` would only paper over. Same reasoning,
+> and same home, as the state-account grant above.
+
+> **Why the role includes read.** `Key Vault Secrets Officer` covers get, list,
+> set and delete; there is no write-only secrets role, and Terraform needs read
+> anyway — `azurerm_key_vault_secret` refreshes state by reading the value back
+> to detect drift. The accepted consequence is that the deploy identity can
+> read these secrets. It is acceptable **only because none of them contains a
+> credential** (Postgres is Entra-only, Managed Redis has keys disabled). A
+> real password must never be a Terraform-managed secret: set it out of band
+> with `az keyvault secret set` and reference it with a data source. See
+> `docs/configuration.md`.
+
+Re-register this grant in a clean tenant (14.59).
 
 ## GitHub Environments (14.6)
 | Environment | Reviewer | Wait  | Deployment branches | Variables                                                                    |

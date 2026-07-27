@@ -12,3 +12,8 @@ output "fqdn" {
   description = "Server FQDN — the host the 14.E connection configuration points at."
   value       = azurerm_postgresql_flexible_server.this.fqdn
 }
+
+output "database_name" {
+  description = "Application database name — the Database= segment of the 14.42 connection string."
+  value       = azurerm_postgresql_flexible_server_database.app.name
+}

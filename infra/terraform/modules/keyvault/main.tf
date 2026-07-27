@@ -76,3 +76,19 @@ resource "azurerm_private_endpoint" "keyvault" {
 
   tags = var.tags
 }
+
+# 14.42 — the values 14.43 references. content_type is a note to a human
+# reading the vault, not a behaviour. Writing these needs DATA-PLANE access
+# (Key Vault Secrets Officer on this vault); the deploy identity's grant is a
+# one-time bootstrap recorded in docs/azure/bootstrap.md, deliberately not
+# self-granted here.
+resource "azurerm_key_vault_secret" "this" {
+  for_each = var.secrets
+
+  name         = each.key
+  value        = each.value
+  key_vault_id = azurerm_key_vault.this.id
+  content_type = "application/x-connection-string"
+
+  tags = var.tags
+}

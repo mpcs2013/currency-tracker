@@ -83,3 +83,20 @@ resource "azurerm_postgresql_flexible_server" "this" {
 
   depends_on = [azurerm_private_dns_zone_virtual_network_link.postgres]
 }
+
+# The application database. Named to match the Aspire resource (7.3) and the
+# connection-string key Phase 8 reads, so local and Azure differ only in host.
+# Terraform owns creation, never contents: EF Core migrations are applied by a
+# deploy step, not at app start (AGENTS.md, Phase 8).
+resource "azurerm_postgresql_flexible_server_database" "app" {
+  name      = "currencytracker"
+  server_id = azurerm_postgresql_flexible_server.this.id
+  charset   = "UTF8"
+  collation = "en_US.utf8"
+
+  # Dropping this database is dropping the system of record. A rename or a
+  # collation change would do exactly that, silently, inside an apply.
+  lifecycle {
+    prevent_destroy = true
+  }
+}
