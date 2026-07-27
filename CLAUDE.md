@@ -1,45 +1,50 @@
-# Currency Tracker — Project Guide for Claude
+# Currency Tracker — Claude Code entry point
 
-## Stack
-- .NET 10, Aspire 13, C# (nullable enabled, implicit usings)
-- Messaging: Wolverine  |  Data: EF Core 10 + Redis  |  Auth: Keycloak
-- Tests: xUnit v3, FluentAssertions, NSubstitute, NetArchTest
+@AGENTS.md
 
-## Architecture — Clean Architecture, respect the dependency rule
-- Domain: entities, value objects, domain exceptions. No infrastructure refs.
-- Application: use cases, Wolverine handlers, ports/interfaces.
-- Infrastructure: EF Core, Redis, Keycloak, external adapters.
-- Api/Host: Aspire wiring, endpoints, ProblemDetails mapping.
-- Never let inner layers depend on outer layers. NetArchTest enforces this — keep it green.
+**`AGENTS.md`, imported above, is canonical.** It holds the architecture
+contract, conventions, the `Don't` list, quality gates and the gotcha ledger,
+and it is the file every runtime reads — Claude Code, Codex, Cursor, Copilot.
+This file exists only because Claude Code auto-loads `CLAUDE.md`; it adds
+routing and nothing else. **Never restate a rule from `AGENTS.md` here.** Two
+copies of a convention is how this file ended up documenting a `/web` React
+frontend that has never existed.
 
-## Layout
-- /src/Api, /src/Application, /src/Domain, /src/Infrastructure — .NET 10 Clean Architecture
-- /web — React + TypeScript (Vite), talks to the API over REST
+## Build & test
 
-## Frontend conventions
-- TypeScript strict; functional components + hooks.
-- Keep API types in sync with the backend DTOs/ProblemDetails contract.
-- Lint clean (ESLint) and formatted (Prettier) before commit.
+```
+dotnet build -c Release                  # TreatWarningsAsErrors — a warning fails it
+dotnet test  -c Release --no-build       # xUnit v3; needs Docker for Testcontainers
+dotnet csharpier format .                # or --check, as CI runs it
+dotnet format --verify-no-changes
+dotnet run --project src/CurrencyTracker.AppHost   # Aspire orchestrates Postgres + Redis
+```
 
-## Backend conventions
-- (as in the main project guide — Clean Architecture, xUnit v3, ProblemDetails)
+`/gates` runs the whole sequence in CI's order.
 
-## Error handling
-- Typed domain exception hierarchy -> RFC 9457 ProblemDetails at the boundary.
-- Don't swallow exceptions; map them.
+## Routing
 
-## Build & test commands
-- Build:  dotnet build
-- Test:   dotnet test
-- Run:    dotnet run --project <AppHost>   (Aspire orchestrates dependencies)
+| When you're… | Reach for |
+| --- | --- |
+| Starting an issue | `docs/workflow.md` — the eight-step loop |
+| Running the quality gates | `/gates` |
+| Recording an architectural choice | `/adr <topic>` |
+| Writing or changing `.github/workflows/**` | `ci-workflow-authoring` skill |
+| Writing or changing `infra/terraform/**` | `terraform-module` skill |
+| Touching a Wolverine handler, the outbox or scheduling | `wolverine-handler` skill |
+| Reviewing a diff for spans / metrics / structured logs | `observability-reviewer` agent |
+| Reviewing `infra/**` or a deploy workflow | `azure-posture-reviewer` agent |
+| Reviewing app-code security | built-in `/security-review` |
+| Suspecting the docs have drifted from reality | `/drift` |
 
-## Conventions
-- Match existing patterns before introducing new ones.
-- New behavior needs xUnit v3 tests with FluentAssertions; mock with NSubstitute.
-- After any change, run the build and the full test suite and report exact errors.
-- Prefer small, reviewable diffs.
+`SKILLS.md` explains the full setup — what each artifact is, when it fires, and
+what was deliberately *not* built.
 
-## Guardrails
-- Do not add NuGet packages without flagging why.
-- Do not weaken or skip NetArchTest rules to make a build pass.
-- Ask before schema/migration changes.
+## Two things worth knowing before you edit
+
+- **The frontend does not exist.** No `/web`, no `package.json`. It is Phase 16
+  and unstarted. Don't propose UI work, and don't reintroduce frontend
+  conventions here — that was this file's stale content until 15.1.
+- **Layer placement is enforced, not advised.** `CurrencyTracker.Architecture.Tests`
+  checks the dependency rule in IL on every `dotnet test`. Don't reason about
+  whether a reference is allowed; the build already answers.
