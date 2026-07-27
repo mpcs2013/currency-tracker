@@ -8,9 +8,15 @@ public sealed class RatesLatestEndpointSmokeTests
 {
     static RatesLatestEndpointSmokeTests()
     {
+        // The string must PARSE, even though nothing ever connects: 14.44 moved
+        // the Npgsql data source behind ApplicationDataSource.Create, which
+        // builds it during AddInfrastructure() instead of lazily on first use.
+        // This line previously ended in a literal "******" — a redaction that
+        // produced an unparseable connection string and went unnoticed for as
+        // long as UseNpgsql(string) deferred the parse.
         Environment.SetEnvironmentVariable(
             "ConnectionStrings__currencytracker",
-            "Host=localhost;Database=latest-rates-tests;Username=noop;" + "******"
+            "Host=localhost;Database=latest-rates-tests;Username=noop;Password=noop"
         );
         Environment.SetEnvironmentVariable("ConnectionStrings__cache", "localhost:6379");
     }
