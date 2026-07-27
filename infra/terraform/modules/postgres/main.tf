@@ -2,6 +2,25 @@
 # exists in this file, in tfvars, or in state — password auth is OFF, and
 # access is exactly the Entra principals registered as administrators (14.24).
 
+# Provider requirements for this directory. The root module pins the same
+# constraints in versions.tf; these are the floor a caller must satisfy, and
+# what tflint reads when --recursive lints this module as a standalone root.
+terraform {
+  required_version = ">= 1.15"
+
+  required_providers {
+    azurerm = {
+      source  = "hashicorp/azurerm"
+      version = "~> 4.0"
+    }
+
+    random = {
+      source  = "hashicorp/random"
+      version = "~> 3.0"
+    }
+  }
+}
+
 data "azurerm_client_config" "current" {}
 
 resource "random_string" "suffix" {
@@ -38,6 +57,8 @@ resource "azurerm_private_dns_zone_virtual_network_link" "postgres" {
 }
 
 resource "azurerm_postgresql_flexible_server" "this" {
+  #checkov:skip=CKV2_AZURE_57:PROD reaches this server over VNet INJECTION (delegated_subnet_id + private_dns_zone_id below), not a private endpoint. Flexible Server supports one or the other, never both; checkov only recognises the endpoint form.
+  #checkov:skip=CKV_AZURE_136:geo_redundant_backup_enabled is create-time only, so it cannot be turned on later without rebuilding the server. Left off pending a stated RPO — the backing data is reproducible FX snapshots, not a system of record for anyone else.
   name                = local.server_name
   resource_group_name = var.resource_group_name
   location            = var.location

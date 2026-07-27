@@ -5,6 +5,20 @@
 #    harmless, not free. Scale-out is a future issue (clustering/queues),
 #    not a knob to turn here.
 
+# Provider requirements for this directory. The root module pins the same
+# constraints in versions.tf; these are the floor a caller must satisfy, and
+# what tflint reads when --recursive lints this module as a standalone root.
+terraform {
+  required_version = ">= 1.15"
+
+  required_providers {
+    azurerm = {
+      source  = "hashicorp/azurerm"
+      version = "~> 4.0"
+    }
+  }
+}
+
 resource "azurerm_container_app" "worker" {
   name                         = "ca-${var.name_prefix}-worker"
   resource_group_name          = var.resource_group_name
