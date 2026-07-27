@@ -68,7 +68,7 @@ jobs:
         uses: actions/checkout@v7
 
       - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
+        uses: hashicorp/setup-terraform@v4
         with:
           # Core version floats; versions.tf's required_version (>= 1.15)
           # is the floor and init enforces it. Providers ARE pinned — via
