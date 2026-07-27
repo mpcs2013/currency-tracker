@@ -37,6 +37,10 @@ for which size of change.
    with `traceId`?). You can outsource this review to the agent by
    pasting your own diff back and framing it as a third-party reviewer
    — `Mindset: Security. Review this diff for OWASP top-10 concerns.`
+   In Claude Code, run the three lenses in parallel instead of pasting:
+   `/code-review` (architectural), `/security-review` (security), and the
+   `observability-reviewer` agent. For a diff touching `infra/**` or a deploy
+   workflow, add `azure-posture-reviewer`. See [`SKILLS.md`](../SKILLS.md).
 7. **Update `docs/decisions/`** if the PR introduces an architectural
    choice that future-you might question. Update `AGENTS.md` (Conventions,
    Gotchas, or Don't) if the session surfaced a new project-specific rule.
@@ -81,5 +85,8 @@ handler "because the change is small", you're under-applying it.
 
 - [`AGENTS.md`](../AGENTS.md) — project memory, principles, and the
   mindset taxonomy.
-- [`docs/prompts.md`](./prompts.md) — paste-ready reusable prompts.
+- [`SKILLS.md`](../SKILLS.md) — the Claude Code setup: which skill, agent
+  or command covers which step of this loop.
+- [`docs/prompts.md`](./prompts.md) — paste-ready reusable prompts, for
+  runtimes without an invocation mechanism.
 - [`docs/decisions/`](./decisions/) — architecture decision records.

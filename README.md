@@ -6,19 +6,20 @@ Clean Architecture, .NET 10 LTS, Wolverine, Aspire, Postgres, Redis.
 
 ## Current phase
 
-**Phase 12 — Worker + scheduled ingestion + alerts + outbox.** The API is
-live and authenticated (auth landed in Phase 11). Phase 12 turns the Worker
-from a no-op host into a durable, scheduled message host: Part 1 adds the
-daily scheduled ingestion on a Postgres outbox/inbox; Part 2 adds the
-`ingest → evaluate → dispatch` alert cascade. The build plan runs through
-Phase 16 (optional React frontend). Deploy is Phase 14; ignore anything
-deploy-related until then.
+**Phase 14 — Azure deployment (UAT + PROD): complete.** Every milestone from
+Phase 0 through Phase 14 is closed. The API is live and authenticated
+(Phase 11), the Worker is a durable scheduled message host on a Postgres
+outbox/inbox with the `ingest → evaluate → dispatch` alert cascade (Phase 12),
+observability landed in Phase 13, and Phase 14 shipped the Terraform estate and
+the UAT/PROD pipelines.
+
+Nothing is open beyond that yet. Phase 16 is the optional React frontend and has
+not started — there is no `/web` directory and no frontend build.
 
 ## Running locally
 
-Phase 7 lands the Aspire AppHost. From a clean clone, one command
-brings up the entire local stack (Api, Worker, Postgres, Redis, and
-the Aspire dashboard):
+One command brings up the entire local stack (Api, Worker, Postgres, Redis,
+and the Aspire dashboard):
 
 ```bash
 dotnet run --project src/CurrencyTracker.AppHost
@@ -139,6 +140,13 @@ No schema change is needed — rates are stored by code, not column.
 
 - `AGENTS.md` — conventions, "Don't" list, gotchas. **Read this if you are
   an agent session, before doing anything else.**
+- `CLAUDE.md` — Claude Code's entry point: imports `AGENTS.md` and routes to
+  the right skill, agent or command.
+- `SKILLS.md` — the `.claude/` setup: what each skill, agent and command does,
+  what was deliberately not built, and how to add or retire one.
+- `docs/workflow.md` — the eight-step per-issue loop.
+- `docs/prompts.md` — paste-ready prompts for runtimes without an invocation
+  mechanism (plain Claude chat, Copilot, Cursor).
 - `docs/decisions/` — architecture decision records.
 
 ## Licence

@@ -16,8 +16,15 @@ suggest UI work before then.
 
 ## Current phase
 
-**Phase 0 — Minimal repo bootstrap.** No `.csproj` files exist yet. The
-first project lands in Phase 2 (solution skeleton).
+**Phase 14 — Azure deployment (UAT + PROD): complete.** Every milestone from
+Phase 0 to Phase 14 is closed — 338 issues — and no issue is open. The
+next phase has not been opened yet; Phase 16 is the optional React frontend and
+is still not started — don't suggest UI work.
+
+What exists on disk today: 7 projects under `src/`, 9 xUnit v3 test projects
+under `tests/`, 12 Terraform modules under `infra/terraform/modules/`, and 17
+GitHub Actions workflows. Treat the tables below as descriptions of shipped
+code, not as a forward plan — the "lands in phase N" columns are history now.
 
 ## Architecture
 
@@ -225,34 +232,36 @@ them. When in doubt, this section wins.
 - Add `<PackageVersion>` entries to `Directory.Packages.props` for packages
   no `.csproj` yet references. Speculative pins rot.
 
-## The eleven-mindset taxonomy
+## The mindset taxonomy
 
-You don't create eleven Claude Projects, eleven Cursor rule files, or
-eleven Copilot custom-instruction sets. You use this table to decide
-*which mindset to invoke* when starting an issue. Most issues map cleanly
-to one row. Some span two — that's fine, name both at the top of your
-prompt.
+This table used to have eleven rows. Six of them — Domain, Application,
+Infrastructure, API, Worker, Frontend — only ever answered *"which directory am
+I in?"*, which the **Project layout** table above already answers better and
+which NetArchTest enforces at build time. Naming them added ceremony, not
+constraint. They were cut in 15.1; the layer follows from the file you're
+editing.
 
-| Mindset                | Owns                                                                                              | Refuses                                          |
-| ---------------------- | ------------------------------------------------------------------------------------------------- | ------------------------------------------------ |
-| **Domain**             | DDD modelling, value objects, aggregates, invariants, domain events                               | Anything outside `src/CurrencyTracker.Domain`    |
-| **Application**        | Ports, CQRS messages, Wolverine handlers, validators                                              | Direct EF Core / Redis / HTTP code               |
-| **Infrastructure**     | EF Core, Redis, HTTP adapters, Keycloak / Entra client wiring                                     | Domain logic, business rules                     |
-| **API**                | `WolverineFx.Http` endpoints, DTOs, ProblemDetails, OpenAPI                                       | Domain rules, infrastructure                     |
-| **Worker**             | Wolverine scheduling, outbox / inbox, idempotency, retries, dead-letter handling                  | UI, API surface                                  |
-| **Testing**            | xUnit v3, FluentAssertions, NSubstitute, Testcontainers, Alba, test-pyramid balance               | Writing production code (suggests, never writes) |
-| **Security**           | OWASP review, JWT validation, secret handling, RBAC, Key Vault, threat modelling                  | Functional features (review-only)                |
-| **Observability**      | OpenTelemetry spans, metrics, Serilog enrichers, dashboards, alerts                               | Functional logic                                 |
-| **Azure / Deployment** | Terraform, Container Apps, ACR, Key Vault, OIDC federation, App Insights wiring, CI/CD workflows  | Application code                                 |
-| **Frontend**           | React + TypeScript scaffolding, API client, Keycloak / Entra SPA flow, Vite config (Phase 16)     | Backend code, infrastructure                     |
-| **Documentation**      | `README.md`, `docs/`, decision records, architecture diagrams, onboarding text                    | Code (read-only)                                 |
+The five that remain are the ones that carry a genuine *stance* — a lens you
+have to deliberately put on, because nothing in the file path implies it. Each
+now routes to a real artifact instead of a paste-buffer.
 
-**Invocation pattern.** Open every session with one line:
+| Mindset                | Owns                                                                                             | Refuses                                          | Routes to                                                     |
+| ---------------------- | ------------------------------------------------------------------------------------------------ | ------------------------------------------------ | ------------------------------------------------------------- |
+| **Testing**            | xUnit v3, FluentAssertions, NSubstitute, Testcontainers, Alba, test-pyramid balance              | Writing production code (suggests, never writes) | §Testing conventions below; `/gates`                          |
+| **Security**           | OWASP review, JWT validation, secret handling, RBAC, Key Vault, threat modelling                 | Functional features (review-only)                | built-in `/security-review`; `azure-posture-reviewer` agent   |
+| **Observability**      | OpenTelemetry spans, metrics, Serilog enrichers, dashboards, alerts                              | Functional logic                                 | `observability-reviewer` agent                                |
+| **Azure / Deployment** | Terraform, Container Apps, ACR, Key Vault, OIDC federation, App Insights wiring, CI/CD workflows | Application code                                 | `terraform-module` + `ci-workflow-authoring` skills           |
+| **Documentation**      | `README.md`, `docs/`, decision records, architecture diagrams, onboarding text                   | Code (read-only)                                 | `/adr`; `docs-drift-auditor` agent                            |
 
-    Mindset: Application + Security. Issue: <paste the GitHub issue here>.
+**Invocation.** In Claude Code you no longer type a mindset — the skills fire on
+their own descriptions and the agents are dispatched by name or by `/drift`.
+`SKILLS.md` documents the full roster and the rule for when to add another.
 
-That is the entire ceremony. The full per-issue workflow lives in
-`docs/workflow.md`; the reusable prompts live in `docs/prompts.md`.
+The `Mindset: X + Y.` opener is still the right ceremony in runtimes with no
+invocation mechanism (plain Claude chat, Copilot, Cursor). `docs/prompts.md`
+keeps the paste-ready long forms for exactly that case.
+
+The per-issue loop lives in `docs/workflow.md`.
 
 ## Conventions
 
@@ -289,25 +298,39 @@ That is the entire ceremony. The full per-issue workflow lives in
   (Phase 5.)
 - **Don't auto-apply EF Core migrations on app start in production.** Local
   dev / Aspire only. (Phase 8.)
-- Don't modify AGENTS.md, workflow.md, prompts.md, domain.md, ports.md,
-  0001-stack-choices.md, or any file under docs/decisions/ unless the issue
-  explicitly names that file as the deliverable. Surface the proposed change
-  in the PR description instead.
+- Don't modify AGENTS.md, CLAUDE.md, SKILLS.md, workflow.md, prompts.md,
+  domain.md, ports.md, 0001-stack-choices.md, any file under docs/decisions/,
+  or anything under `.claude/agents/`, `.claude/skills/` or `.claude/commands/`
+  unless the issue explicitly names that file as the deliverable. Surface the
+  proposed change in the PR description instead. The `.claude/` entries were
+  added in 15.1: they are the new canon and drift there is as expensive as
+  drift here.
 
 ## Quality gates
 
-Every PR runs locally and in CI:
+Every PR runs locally and in CI. `/gates` runs the whole sequence in CI's order.
 
-- `csharpier format .` (and `csharpier --check .` in CI).
-- `dotnet format --verify-no-changes` (style + analyzer rules).
+- `dotnet tool restore` — csharpier is a **local** tool pinned in
+  `.config/dotnet-tools.json`, so every invocation is `dotnet csharpier …`.
+- `dotnet csharpier format .` locally; `dotnet csharpier check .` in CI.
+  It is a `check` **subcommand**, not a `--check` flag — CSharpier 1.x removed
+  the flag form, and this list carried the wrong one until 15.1.
+- `dotnet restore --locked-mode`, then `dotnet format --verify-no-changes
+  --no-restore`. Order matters: `dotnet format` needs a restored project graph,
+  and `_reusable-format.yml`'s header records the bug that taught us this.
 - `dotnet build --configuration Release` (treats warnings as errors).
-- `dotnet test --configuration Release --no-build`.
-- Until Phase 2, build and test are skipped by the CI guard (no `.cs` files).
+- `dotnet test --configuration Release --no-build` (needs Docker for the
+  Testcontainers suites).
+- Coverage floor **58%**, enforced by `_reusable-coverage-gate.yml` over the
+  merged Cobertura from all three test jobs. Ratchet up only; the floor is
+  "measured minus 5".
 
 ## Gotchas (update this list as agents hit footguns)
 
-- `actions/setup-dotnet@v6` does not exist. Current is **v5**.
-  `actions/checkout` is on v6 — they have independent release cadences.
+- Action major versions move independently, and this list has been wrong about
+  them before. The repo currently standardises on `actions/checkout@v7` and
+  `actions/setup-dotnet@v6`. Don't take a remembered version on faith — grep
+  `.github/workflows/` for what the other 17 files actually pin, and match it.
 - `setup-dotnet` reads `global.json` if `dotnet-version` is left empty. Don't
   pin a version in the workflow; let `global.json` be the single source.
 - `dotnet format` errors against an empty repo. Hence the "Detect C# sources"
@@ -357,7 +380,17 @@ Every PR runs locally and in CI:
 - A new `AlwaysUseServiceLocationFor<T>()` opt-in must land in EVERY host's
   `UseWolverine` block (Api AND Worker) in the same PR — both hosts discover
   the same Application handlers, so an opt-in added to one host alone fails
-  the other at startup with `InvalidServiceLocationException`.  
+  the other at startup with `InvalidServiceLocationException`.
+- `.gitignore` cannot re-include a path inside an ignored **directory**. Git
+  does not descend into a directory it has excluded, so `/.claude` followed by
+  `!/.claude/agents/` silently re-includes nothing. Ignore the *contents*
+  (`/.claude/*`) and then negate. Last matching pattern wins, so a negation
+  must also sit *after* any broader rule that would re-catch it.
+- Don't add blanket extension rules to `.gitignore`. A `*.json` line lived at
+  the bottom of the file until 15.1, ignoring `.mcp.json` outright; the 14
+  tracked `.json` files survived it only because gitignore has no effect on
+  already-tracked files. It would have silently swallowed `package.json` and
+  `tsconfig.json` the day Phase 16 started. Ignore specific paths.
 
 ## How to update this file
 
@@ -366,11 +399,13 @@ This file is living memory. When you (the agent or the human) discover:
 - a convention worth recording, add it to **Conventions**;
 - a footgun the next session shouldn't hit, add it to **Gotchas**;
 - a library or pattern the project has rejected, add a one-liner under
-  **Don't** *and* link to a `docs/decisions/NNNN-*.md` with the reasoning.
-
-Drift is the failure mode. A file that hasn't been touched in three phases is
-probably wrong.
-
+  **Don't** *and* link to a `docs/decisions/NNNN-*.md` with the reasoning;
 - a mindset whose Owns / Refuses prose has grown past ~300 lines and needs
   its own `docs/agents/<name>.md` file — split it, link it from the table,
   and write a one-line ADR explaining the split.
+
+Drift is the failure mode. A file that hasn't been touched in three phases is
+probably wrong. This file spent Phases 1–14 claiming "Phase 0 — no `.csproj`
+files exist yet" while 7 projects shipped underneath it; the
+`docs-drift-auditor` agent exists because prose asking to be updated does not
+get updated. Run `/drift` before you trust this file.

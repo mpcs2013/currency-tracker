@@ -3,6 +3,13 @@
 This file is a small catalogue of prompts you paste **verbatim** into
 agent sessions. It is not exhaustive — and it isn't trying to be.
 
+> **In Claude Code, don't paste these.** Every prompt below now has a real
+> invocation — a skill, an agent or a slash command — noted under its heading.
+> The catalogue is retained because the replacements exist only in Claude Code,
+> and this project is also driven from plain Claude chat, Copilot and Cursor,
+> where pasting is still the interface. See [`SKILLS.md`](../SKILLS.md) and
+> ADR [0016](./decisions/0016-agent-configuration-in-claude-dir.md).
+
 **Inclusion criterion:** you have pasted the same shape at least three
 times across different sessions. Below that, it's not yet reusable; keep
 it in your head or in a scratch file.
@@ -21,6 +28,9 @@ isn't.
 Use this for **step 2 of the per-issue workflow**
 ([`docs/workflow.md`](./workflow.md)). It is the prompt you'll paste
 most.
+
+*In Claude Code:* plan mode plus `AGENTS.md` §Agent principles ("explain the
+goal in plain English before generating code") already impose this. No paste.
 
 ` ```text
 
@@ -44,6 +54,10 @@ Stop after the plan. Do not generate code until I confirm.
 
 Use this **immediately after** the plan in #1 is confirmed and before
 any implementation. Forces a red-then-green workflow.
+
+*In Claude Code:* `AGENTS.md` §Agent principles ("generate failing tests
+first — red, then green") and step 3 of `workflow.md` cover it; the
+`wolverine-handler` skill carries the checklist for handler work.
 
 ` ```text
 
@@ -73,6 +87,11 @@ Show the tests as full file contents I can paste; show the expected
 
 Use for **step 6 of the per-issue workflow** — self-review outsourced to
 the agent. Three lenses, one prompt.
+
+*In Claude Code:* run the lenses separately and in parallel — `/code-review`
+for the architectural lens, `/security-review` for security, and the
+`observability-reviewer` agent for observability. Three focused contexts beat
+one prompt carrying three jobs.
 
 ` ```text
 
@@ -107,6 +126,9 @@ Use **once per HTTP-facing PR** (anything that touches `Api`, an
 endpoint, an auth flow, or input deserialisation). Heavier than the
 review prompt — pull it out for higher-risk diffs.
 
+*In Claude Code:* the built-in `/security-review` walks the pending branch
+changes and covers this ground.
+
 ` ```text
 
 Mindset: Security.
@@ -138,6 +160,10 @@ Use when a Wolverine handler or HTTP endpoint exists but you suspect it's
 under-instrumented. Often paired with #3 after the architectural and
 security lenses have come back clean.
 
+*In Claude Code:* the `observability-reviewer` agent. It also skips the
+CA1848/CA1873 material below — those are compile errors here, so the build
+reports them before any reviewer can.
+
 ` ```text
 
 Mindset: Observability.
@@ -163,6 +189,11 @@ Code:
 Use when reading or writing an Azure resource in Terraform — even before
 the HCL is yours to keep. Forces Microsoft's docs and the security
 defaults into the conversation early.
+
+*In Claude Code:* the `azure-posture-reviewer` agent, which reviews against
+this project's recorded treaty (ADRs 0014 and 0015) rather than generic Azure
+advice, and skips what tflint and checkov already gate. The
+`terraform-module` skill covers the authoring side.
 
 ` ```
 
@@ -197,6 +228,11 @@ sessions, lift it into this file. Use the structure above: a sentence on
 when to use it, then a fenced block with the `Mindset:` field pre-filled
 or templated. Keep the prompt under 30 lines — anything longer is
 probably two prompts.
+
+If the shape is one you want in **Claude Code**, it belongs in `.claude/`
+instead — see the "Adding and retiring" section of [`SKILLS.md`](../SKILLS.md),
+which uses the same three-times rule. Add it here as well only if you also
+paste it into other runtimes.
 
 ## Removing a prompt
 

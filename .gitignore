@@ -483,8 +483,25 @@ $RECYCLE.BIN/
 
 # Vim temporary swap files
 *.swp
-/.claude
-*.json
+
+# --- Claude Code (15.1) ---
+# The shared agent setup is committed and reviewable; the machine-local
+# Visual Studio bridge (settings*.json + vs-*.ps1) is not.
+#
+# NOTE: `/.claude/*`, NOT `/.claude/`. Git does not descend into an ignored
+# DIRECTORY, so a negation under a bare `/.claude` can never re-include
+# anything. Ignore the contents, then negate the three shared subdirectories.
+/.claude/*
+!/.claude/agents/
+!/.claude/skills/
+!/.claude/commands/
+
+# A blanket `*.json` rule lived here until 15.1. It was redundant — build
+# output is already covered by `[Bb]in/` and `[Oo]bj/` above, and `.vs/` and
+# `/.claude/*` cover the rest — while silently un-tracking `.mcp.json` and
+# arming a trap for Phase 16 (`package.json`, `tsconfig.json`). Removed.
+# Don't reintroduce it; ignore specific paths instead.
+
 /.github/workflows/claude-code-review.yml
 
 
