@@ -1,8 +1,9 @@
 # _reusable-terraform.yml — the enforced IaC gate (fmt/init/validate/
 # tflint/checkov/plan[/apply]) over ARM_* OIDC. The `environment` input
 # selects backend config, tfvars, OIDC trust, and AZURE_* vars TOGETHER
-# (the 14.B switch-together rule, encoded). Callers: terraform-pr.yml,
-# deploy-uat.yml, deploy-prod.yml.
+# (the 14.B switch-together rule, encoded). An APPLY targets the `<env>`
+# GitHub Environment; a PLAN targets `<env>-plan` — see the job-level note.
+# Callers: terraform-pr.yml, deploy-uat.yml, deploy-prod.yml.
 name: _reusable-terraform
 
 on:
@@ -33,7 +34,21 @@ jobs:
     name: terraform (${{ inputs.environment }})
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    environment: ${{ inputs.environment }}
+    # Apply → `uat` / `prod`: reviewer, wait timer and a main-only deployment
+    # branch policy, exactly as before. Plan → `uat-plan`: same AZURE_* vars and
+    # its own federated credential, no protection rules.
+    #
+    # Not a loosening — the opposite. `uat`'s branch policy allows `main` only,
+    # so terraform-pr.yml's plan job was REFUSED before its first step ran
+    # (failed in 2s, no logs) for every PR branch. Widening that policy would
+    # have let a PR branch deploy; a separate plan-only environment lets it
+    # plan and nothing else, and leaves every apply path gated as it was.
+    #
+    # The switch-together rule still holds: callers still pass one `environment`,
+    # and backend, tfvars, trust and vars still select as a unit — `apply` picks
+    # which unit. A plan-only call for an env with no `<env>-plan` environment
+    # fails closed at azure/login: no federated credential, no token.
+    environment: ${{ inputs.apply && inputs.environment || format('{0}-plan', inputs.environment) }}
     permissions:
       contents: read
       id-token: write

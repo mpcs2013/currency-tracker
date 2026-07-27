@@ -31,7 +31,7 @@ graph LR
   DR --> CG
 
   PRI[pull_request on infra/**] --> TFPR[terraform-pr.yml]
-  TFPR --> TFU0[_reusable-terraform: uat, plan only]
+  TFPR --> TFU0[_reusable-terraform: uat tfvars, uat-plan trust, plan only]
   TFU0 --> PC[sticky plan comment]
 
   Merge[push to main] --> M[main-ci.yml]
@@ -64,6 +64,18 @@ subject `gh-deploy-prod`'s federated credential trusts — and it resolves
 `vars.AZURE_*` from the prod scope. Trust, approval, and configuration select
 together or not at all, so UAT credentials cannot be aimed at PROD by accident:
 outside their environment, they do not exist.
+
+The same keyword is why `terraform-pr.yml` targets **`uat-plan`** and not `uat`.
+`uat`'s deployment-branch policy allows `main` only, so the PR plan job was
+refused before it started — a 2-second failure with no logs, on every infra PR
+since the workflow landed. `_reusable-terraform.yml` now derives the GitHub
+Environment from `inputs.apply`: an apply gets `<env>`, a plan gets `<env>-plan`.
+Callers still pass one `environment`, and backend, tfvars, trust and vars still
+select as a unit — `apply` only chooses which unit. `uat-plan` has no protection
+rules and its own federated credential (`docs/azure/bootstrap.md` §Federated
+credentials); a plan-only call for an environment with no `<env>-plan` fails
+closed at login rather than falling back to the gated one. Nothing that applies
+or deploys may reference it.
 
 ---
 
@@ -297,6 +309,7 @@ Where this implementation departs from the Phase 14.D plan, and why.
 | 14.28 | `_reusable-test.yml` runs the whole solution and owns the coverage floor | **split three ways** | Container suites raced on Testcontainers ports when run alongside everything else; the floor moved to `_reusable-coverage-gate.yml` because no single job now sees all the coverage. |
 | 14.40 | Required list includes `build / build` | **`coverage / coverage`** | Follows from the two rows above. Swapped in the branch-protection API in the same change. |
 | 14.40 | Required list names each job individually | **one `ci-gate` aggregate** | Naming jobs directly cannot survive the `changes` filter: a skipped reusable caller reports its bare name and never the composite the list requires, so every infra-only or doc-only PR waited forever on six checks that would never arrive (PR #388). `ci-gate` is a plain `if: always()` job that reports one name in both cases. Swapped in the branch-protection API in the same change. |
+| 14.34 | `terraform-pr` runs `_reusable-terraform` against the `uat` environment | **`uat-plan`, derived from `apply`** | `uat` is main-only by deployment-branch policy, so the plan job was refused before its first step on every PR branch — the workflow could never have worked as merged. Widening the policy would have let PR branches deploy; a plan-only environment lets them plan and leaves every apply path gated. |
 | 14.29 | `_reusable-docker-build.yml` takes a `push` input | dropped | Pushing is `_reusable-acr-push.yml`'s single responsibility; a `push` input here would let a caller bypass the Trivy gate. |
 | 14.26 | Dockerfile `HEALTHCHECK` | omitted | Container Apps ignores it, and the chiseled base ships no shell or curl to run one. Health is the platform probe seam. |
 | 14.39 | `SLACK_WEBHOOK_URL` env-scoped | repo-level secret | See above — an approval gate in front of a failure alert is backwards. |

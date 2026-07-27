@@ -30,10 +30,26 @@ misleading `SubscriptionNotFound`: `Microsoft.Storage`, `Microsoft.KeyVault`,
 | gh-deploy-prod  | `4fbd780a-9e9f-41c9-bed2-98d3509d0aa1`  | `b99eedea-11b9-4817-8141-1e1f7625e055`	| created           |
 
 ## Federated credentials (14.2) — issuer `https://token.actions.githubusercontent.com`, audience `api://AzureADTokenExchange`
-| App             | Subject                                                     |
-| --------------- | ---------------------------------------------------------- |
-| gh-deploy-uat   | `repo:mpcs2013/currency-tracker:environment:uat`           |
-| gh-deploy-prod  | `repo:mpcs2013/currency-tracker:environment:prod`          |
+| App             | Credential name  | Subject                                                     |
+| --------------- | ---------------- | ----------------------------------------------------------- |
+| gh-deploy-uat   | `github-env-uat` | `repo:mpcs2013/currency-tracker:environment:uat`            |
+| gh-deploy-uat   | `gh-uat-plan`    | `repo:mpcs2013/currency-tracker:environment:uat-plan`       |
+| gh-deploy-prod  | `github-env-prod`| `repo:mpcs2013/currency-tracker:environment:prod`           |
+
+`gh-uat-plan` (added 2026-07-27) is what makes `terraform-pr.yml` able to run at
+all. `uat`'s deployment-branch policy allows `main` only, so a plan job on a PR
+branch was refused before its first step — a 2-second failure with no logs.
+Widening that policy would have let PR branches *deploy*; a second subject that
+only the plan-only path can reach lets them plan and nothing else. Same app
+registration, so the token's Azure rights are unchanged — the trust boundary
+moved, not the authorisation.
+
+> **What this accepts.** Any branch in this repo that can open a PR can now
+> obtain a token for `gh-deploy-uat`, which holds Contributor on
+> `rg-currencytracker-uat`. That is inherent to running `terraform plan` on a PR
+> (plan reads every resource and writes a state lock), and it is why the plan
+> path is UAT-only and PROD is planned at release time instead. A fork PR cannot
+> reach it: fork workflows get no environment vars and no OIDC token.
 
 ## Resource groups (14.3, 14.4)
 | RG                            | Purpose                          | Managed by Terraform? |
@@ -129,8 +145,22 @@ role lands. Re-register these grants in a clean tenant (14.59).
 ## GitHub Environments (14.6)
 | Environment | Reviewer | Wait  | Deployment branches | Variables                                                                    |
 | ----------- | -------- | ----- | ------------------- | ---------------------------------------------------------------------------- |
-| uat         | none     | none  | `main`              | AZURE_CLIENT_ID, AZURE_TENANT_ID, AZURE_SUBSCRIPTION_ID, AZURE_RESOURCE_GROUP |
+| uat         | required | none  | `main`              | AZURE_CLIENT_ID, AZURE_TENANT_ID, AZURE_SUBSCRIPTION_ID, AZURE_RESOURCE_GROUP |
+| uat-plan    | none     | none  | any                 | AZURE_CLIENT_ID, AZURE_TENANT_ID, AZURE_SUBSCRIPTION_ID                       |
 | prod        | required | 5 min | `main`, `v*` tags   | AZURE_CLIENT_ID, AZURE_TENANT_ID, AZURE_SUBSCRIPTION_ID, AZURE_RESOURCE_GROUP |
+
+`uat`'s reviewer row said `none` until 2026-07-27; the API says a required
+reviewer has been configured. Corrected here rather than removed from the
+environment — read the API, not this table, when it matters:
+`gh api repos/mpcs2013/currency-tracker/environments/uat`.
+
+`uat-plan` (2026-07-27) exists only so `terraform-pr.yml` can plan from a PR
+branch — see the federated-credentials note above. **No protection rules on
+purpose**: a reviewer gate in front of a read-only plan would put a manual
+approval on every infra PR, and a branch policy is precisely what it works
+around. It carries no `AZURE_RESOURCE_GROUP` because `_reusable-terraform.yml`
+reads only the three `ARM_*` values; add it if a plan-path workflow ever needs
+it. Nothing that applies, deploys or promotes may reference this environment.
 
 `AZURE_RESOURCE_GROUP` (added 14.31) holds the environment's RG name from the
 14.3 table (`rg-currencytracker-uat` / `rg-currencytracker-prod`); workflows
