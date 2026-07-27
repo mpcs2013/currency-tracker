@@ -149,6 +149,8 @@ No schema change is needed — rates are stored by code, not column.
 - `docs/workflow.md` — the eight-step per-issue loop.
 - `docs/prompts.md` — paste-ready prompts for runtimes without an invocation
   mechanism (plain Claude chat, Copilot, Cursor).
+- `docs/configuration.md` — the configuration precedence ladder, what class of
+  value lives where, and why Key Vault is not a layer.
 - `docs/decisions/` — architecture decision records.
 
 ## Licence

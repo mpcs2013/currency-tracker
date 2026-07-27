@@ -7,6 +7,7 @@ using CurrencyTracker.Application.Exceptions; // NotFoundException
 using CurrencyTracker.Application.Messaging;
 using CurrencyTracker.Domain.Exceptions; // DomainException
 using CurrencyTracker.Infrastructure;
+using CurrencyTracker.Infrastructure.Persistence; // ApplicationDataSource (14.44)
 using CurrencyTracker.ServiceDefaults;
 using CurrencyTracker.Worker.Configuration;
 using CurrencyTracker.Worker.Scheduling;
@@ -42,13 +43,13 @@ builder
 // dispatches resolve their ports through this.
 builder.AddInfrastructure();
 
-// The SAME connection string Phase 8 reads and Phase 7's AppHost injects.
-// Fail fast at boot if it's missing — the outbox cannot function without it.
-var currencyTrackerConnectionString =
-    builder.Configuration.GetConnectionString("currencytracker")
-    ?? throw new InvalidOperationException(
-        "Connection string 'currencytracker' is required for the Wolverine outbox/inbox."
-    );
+// 14.44 — the outbox authenticates like everything else. Wolverine takes an
+// NpgsqlDataSource overload, so the Entra token password provider is written
+// once (Infrastructure) and reused here. This is not a second connection pool:
+// PersistMessagesWithPostgresql(string) built its own data source internally
+// anyway — the only change is who configures it. The fail-fast on a missing
+// connection string now lives inside the factory, with a better message.
+var messagingDataSource = ApplicationDataSource.Create(builder.Configuration);
 
 builder
     .Services.AddOptions<WorkerOptions>()
@@ -101,7 +102,7 @@ builder.UseWolverine(opts =>
     opts.UseFluentValidation();
 
     // Durable transactional inbox/outbox in the SAME database, "wolverine" schema.
-    opts.PersistMessagesWithPostgresql(currencyTrackerConnectionString, "wolverine");
+    opts.PersistMessagesWithPostgresql(messagingDataSource, "wolverine");
 
     // Join Wolverine's messaging to the ApplicationDbContext transaction:
     // a handler's SaveChangesAsync and its outgoing/handled messages commit

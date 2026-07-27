@@ -56,6 +56,16 @@ variable "redis_high_availability_enabled" {
   description = "Whether the cache runs a replica for its SLA (true in PROD). Mirrors postgres_zone_redundant: PROD buys resilience, UAT buys the lower bill."
   type        = bool
 }
+variable "api_authentication_authority" {
+  description = "OIDC issuer the Api validates tokens against, e.g. https://login.microsoftonline.com/<tenant-id>/v2.0. An identifier, not a secret — same posture as the 14.A AZURE_* GitHub variables, and it appears in every token this API validates anyway. Arrives at the container as Authentication__Authority. 14.47's boot-time guard asserts it agrees with the declared provider, so a stale value here kills the revision instead of 401ing every request."
+  type        = string
+}
+
+variable "api_authentication_audience" {
+  description = "Audience the Api requires in a token — the API app registration's client id (or api://<client-id>). An identifier, not a secret. Arrives as Authentication__Audience, and is the same value SMOKE_TOKEN_RESOURCE carries on the uat GitHub environment (14.47)."
+  type        = string
+}
+
 variable "promotion_pull_principal_id" {
   description = "Object ID of gh-deploy-prod, granted AcrPull on this env's ACR for release promotion (az acr import by digest). Set in the UAT envelope only; null in PROD. See modules/role-assignments and docs/ci-cd/pipelines.md."
   type        = string

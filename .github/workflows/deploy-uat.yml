@@ -107,7 +107,7 @@ jobs:
     with:
       environment: uat
       image-tag: ${{ needs.gate.outputs.image-tag }}
-      strict: false # 14.E flips, with the config that makes passing possible
+      strict: true # ← 14.47: config landed; a warned deploy is now a failed deploy
       http-smoke: true
 
   # 14.39 — the reconstruction record is most valuable precisely when something

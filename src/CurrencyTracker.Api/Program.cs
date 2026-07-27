@@ -2,6 +2,7 @@ using System.Diagnostics;
 using CurrencyTracker.Api;
 using CurrencyTracker.Api.ErrorHandling;
 using CurrencyTracker.Api.Health;
+using CurrencyTracker.Api.Security; // AuthenticationProviderGuard (14.47)
 using CurrencyTracker.Application;
 using CurrencyTracker.Application.Abstractions.Notifications;
 using CurrencyTracker.Application.Abstractions.Persistence;
@@ -79,20 +80,44 @@ builder.Services.AddProblemDetails(options =>
 // what a `?? throw` inside the AddJwtBearer callback would do. Mirrors the
 // connection-string fail-fast in AddInfrastructure. (Audience is read in 11.5,
 // where it's first consumed, so its own fail-fast lands there.)
-var authAuthority =
-    builder.Configuration["Authentication:Authority"]
-    ?? throw new InvalidOperationException(
+// 14.46: IsNullOrWhiteSpace, not null. An empty string is a configuration
+// VALUE in .NET, so an appsettings "placeholder" would satisfy a null check and
+// disarm these guards — the Api would then boot green and reject every token at
+// request time. See docs/configuration.md.
+var authAuthority = builder.Configuration["Authentication:Authority"];
+
+if (string.IsNullOrWhiteSpace(authAuthority))
+{
+    throw new InvalidOperationException(
         "Authentication:Authority is not configured. The AppHost injects it as "
-            + "Authentication__Authority (Phase 11.3); non-Aspire hosts (including "
+            + "Authentication__Authority (Phase 11.3); Azure supplies it as a plain "
+            + "environment variable (Phase 14.43); non-Aspire hosts (including "
             + "integration tests) must set it explicitly."
     );
-var authAudience =
-    builder.Configuration["Authentication:Audience"]
-    ?? throw new InvalidOperationException(
+}
+
+var authAudience = builder.Configuration["Authentication:Audience"];
+
+if (string.IsNullOrWhiteSpace(authAudience))
+{
+    throw new InvalidOperationException(
         "Authentication:Audience is not configured. The AppHost injects it as "
-            + "Authentication__Audience (Phase 11.3); non-Aspire hosts (including "
+            + "Authentication__Audience (Phase 11.3); Azure supplies it as a plain "
+            + "environment variable (Phase 14.43); non-Aspire hosts (including "
             + "integration tests) must set it explicitly."
     );
+}
+
+// 14.47 — the declared provider must agree with the authority we were handed.
+// Not a provider switch (ADR 0010): the pipeline below still names no IdP. This
+// is what stops Authentication:Provider from being decorative — without it a
+// stale authority boots green, passes both health probes, and then rejects
+// every token with a generic issuer-validation failure.
+AuthenticationProviderGuard.Validate(
+    builder.Configuration["Authentication:Provider"],
+    authAuthority
+);
+
 builder
     .Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>

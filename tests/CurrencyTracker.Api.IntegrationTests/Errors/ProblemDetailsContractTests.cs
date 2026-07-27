@@ -110,9 +110,22 @@ public sealed class ProblemDetailsContractTests : IClassFixture<TestThrowsFactor
         // TestThrowsFactory's static constructor remains visible to
         // Program.cs because the process env-var is set once for the whole
         // test run.
+        //
+        // 14.47: booting as Production now loads appsettings.Production.json,
+        // which declares Authentication:Provider=EntraId — and the boot-time
+        // guard requires the authority to agree with it. The fixture's default
+        // authority is Keycloak-shaped, so a Production host has to be handed
+        // an Entra-shaped one. That is the guard working, not a test getting in
+        // the way: a host declaring Production while pointing at a realm is
+        // exactly the mismatch it exists to kill.
         using var productionFactory = _factory.WithWebHostBuilder(builder =>
-            builder.UseEnvironment("Production")
-        );
+        {
+            builder.UseEnvironment("Production");
+            builder.UseSetting(
+                "Authentication:Authority",
+                "https://login.microsoftonline.com/00000000-0000-0000-0000-000000000000/v2.0"
+            );
+        });
         var client = productionFactory.CreateClient();
 
         // Act

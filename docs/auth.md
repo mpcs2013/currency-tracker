@@ -78,7 +78,45 @@ Two Entra specifics worth knowing:
   value, never a crash). `IsAuthenticated` stays `true`. (If a stable per-user
   GUID is ever needed, Entra's `oid` claim carries it — a future, ADR-worthy
   change to the adapter, not a Phase 11 one.)  
-  
+
+### In Azure (Phase 14.47)
+
+Entra ID is the identity provider for both deployed environments, still by
+configuration only — the authentication pipeline names no provider anywhere, and
+ADR 0010 is intact.
+
+- **`appsettings.Production.json`** declares `Authentication:Provider=EntraId`
+  and nothing else about auth. `Authority` and `Audience` are **not** in the
+  file: they differ per environment and arrive as plain environment variables
+  from `envs/*/terraform.tfvars` (14.43). Putting them in the file would either
+  hardcode one environment's tenant or reintroduce the placeholder problem 14.46
+  refused.
+- **Both Azure environments load that same file.** `ASPNETCORE_ENVIRONMENT` is
+  `Production` in UAT as well as PROD, because UAT exists to rehearse PROD and a
+  UAT that loads a different profile is rehearsing a different application. The
+  cost is that UAT has no OpenAPI explorer, which was already true under
+  `Staging`. See `docs/configuration.md`.
+- **`Provider` is asserted, not branched on.** `AuthenticationProviderGuard`
+  (`src/CurrencyTracker.Api/Security/`) runs at boot: if the declared provider is
+  `EntraId`, the configured authority must be an HTTPS issuer whose path ends in
+  `/v2.0`. That suffix is true of every Entra v2.0 issuer in every cloud
+  (commercial, government, sovereign) and false of every Keycloak realm URL,
+  which ends in `/realms/<name>`; matching on `login.microsoftonline.com` would
+  be narrower for no gain.
+
+  The failure it prevents is otherwise miserable to diagnose. A stale
+  `Authentication__Authority` — a bad merge, a copied environment — would leave
+  the Api booting green, passing `/health/live` and `/health/ready` (neither
+  touches auth), and then rejecting **every** token with a generic
+  issuer-validation failure. With the guard it dies at startup naming both
+  values, the revision never goes healthy, and `strict: true` fails the deploy.
+- **App roles are still required, and are still not automatic.** Expose `user`
+  and `admin` app roles on the API app registration, or every token
+  authenticates and no token authorises. The deploy identity also needs one
+  assigned (plus admin consent) before the authenticated smoke leg can obtain a
+  token — until then `az account get-access-token --resource <audience>` returns
+  `AADSTS500011` and the leg skips.
+
 ## Security posture (Phase 11.12 review)
 
 - **Audience strictly validated.** `ValidateAudience = true`,

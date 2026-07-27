@@ -108,7 +108,7 @@ jobs:
     with:
       environment: prod
       image-tag: ${{ github.sha }}
-      strict: false # 14.E flips, with UAT
+      strict: true # ← 14.47, with UAT
       http-smoke: false # internal-LB env: the FQDN is unreachable from a hosted
         # runner, so the verdict is revision health (ADR 0015)
 

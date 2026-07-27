@@ -42,30 +42,62 @@ public static class DependencyInjection
     /// </exception>
     public static IHostApplicationBuilder AddInfrastructure(this IHostApplicationBuilder builder)
     {
-        var connectionString =
-            builder.Configuration.GetConnectionString("currencytracker")
-            ?? throw new InvalidOperationException(
-                "The 'currencytracker' connection string is not configured. "
-                    + "Are you running through the Aspire AppHost?"
-            );
+        // 14.44 — one data source for the whole host, and the only place the
+        // connection string is read. Registered as a singleton so the container
+        // disposes it at shutdown: UseNpgsql(DbDataSource) treats the instance
+        // as externally owned and will not dispose it. In Azure this carries an
+        // Entra token password provider; locally it is Aspire's string, as-is.
+        var dataSource = ApplicationDataSource.Create(builder.Configuration);
+        builder.Services.AddSingleton(dataSource);
 
         builder.Services.AddDbContext<ApplicationDbContext>(options =>
-            options.UseNpgsql(connectionString).UseSnakeCaseNamingConvention()
+            options.UseNpgsql(dataSource).UseSnakeCaseNamingConvention()
         );
 
-        // Redis distributed cache. The connection string is injected by the
-        // AppHost via WithReference(cache) (Phase 7.5) as ConnectionStrings__cache.
-        // Fail fast if it's absent — same discipline as the Postgres connection
-        // string in Phase 8. Never hardcode "localhost:6379".
-        var cacheConnection =
-            builder.Configuration.GetConnectionString("cache")
-            ?? throw new InvalidOperationException(
-                "ConnectionStrings__cache is not configured. Run via the AppHost "
-                    + "(WithReference(cache), Phase 7.5) so the connection string is injected."
-            );
-        builder.Services.AddStackExchangeRedisCache(options =>
-            options.Configuration = cacheConnection
+        // 14.45 — Redis distributed cache. Locally the endpoint is Aspire's
+        // plaintext container (WithReference(cache), Phase 7.5) and the
+        // connection string is used as-is. In Azure it is Managed Redis with
+        // access keys disabled, so the connection must present an Entra token
+        // from its FIRST attempt — hence the async factory below: the token
+        // extension is awaitable and the cache invokes the factory lazily, once.
+        //
+        // Never hardcode "localhost:6379". IsNullOrWhiteSpace, not null: an
+        // empty string is a configuration value (14.46, docs/configuration.md).
+        var cacheEndpoint = builder.Configuration.GetConnectionString(
+            CacheConnection.ConnectionStringName
         );
+
+        if (string.IsNullOrWhiteSpace(cacheEndpoint))
+        {
+            throw new InvalidOperationException(
+                $"ConnectionStrings__{CacheConnection.ConnectionStringName} is not configured. "
+                    + "Locally it is injected by the Aspire AppHost (WithReference(cache), "
+                    + "Phase 7.5); in Azure it is a Key Vault reference (Phase 14.43)."
+            );
+        }
+
+        var useManagedIdentity = builder.Configuration.GetValue<bool>(
+            ApplicationDataSource.ManagedIdentityKey
+        );
+
+        if (useManagedIdentity)
+        {
+            // The Worker never opens a cache connection — 14.24 grants the
+            // Managed Redis access policy to the Api ONLY, deliberately, because
+            // grants follow code. This factory's laziness is what makes that
+            // asymmetry survivable rather than a boot failure in the Worker.
+            builder.Services.AddStackExchangeRedisCache(options =>
+                options.ConnectionMultiplexerFactory = () =>
+                    CacheConnection.ConnectAsync(cacheEndpoint, useManagedIdentity: true)
+            );
+        }
+        else
+        {
+            builder.Services.AddStackExchangeRedisCache(options =>
+                options.Configuration = cacheEndpoint
+            );
+        }
+
         builder.Services.AddSingleton<ICacheService, RedisCacheService>();
 
         builder
