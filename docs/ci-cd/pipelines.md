@@ -173,7 +173,7 @@ saying so.
 | `_reusable-docker-build.yml`      | buildx, `type=gha` cache, exports an image tarball (never pushes: scan-before-push)                      | `context`, `dockerfile`, `image-name`, `tag`               |
 | `_reusable-trivy-scan.yml`        | CVE gate on the tarball; HIGH/CRITICAL, fixed-only; `.trivyignore` allowlist                             | `image-name`                                               |
 | `_reusable-acr-push.yml`          | OIDC → `az acr login` → push; outputs the digest                                                         | `image-name`, `tag`, `environment`                         |
-| `_reusable-terraform.yml`         | fmt/init/validate/tflint/checkov/plan[/apply] over `ARM_*` OIDC                                          | `working-dir`, `environment`, `apply`                      |
+| `_reusable-terraform.yml`         | fmt/init/validate/tflint/checkov/plan[/apply] over `ARM_*` OIDC; checkov scans with the env's tfvars     | `working-dir`, `environment`, `apply`                      |
 | `_reusable-azure-deploy.yml`      | `az containerapp update --image` both apps → revision-health poll → smoke; strictness ladder             | `environment`, `image-tag`, `strict`, `http-smoke`         |
 
 ### Why the test work is split three ways
@@ -327,6 +327,8 @@ Where this implementation departs from the Phase 14.D plan, and why.
 | 14.29 | `_reusable-docker-build.yml` takes a `push` input | dropped | Pushing is `_reusable-acr-push.yml`'s single responsibility; a `push` input here would let a caller bypass the Trivy gate. |
 | 14.26 | Dockerfile `HEALTHCHECK` | omitted | Container Apps ignores it, and the chiseled base ships no shell or curl to run one. Health is the platform probe seam. |
 | 14.39 | `SLACK_WEBHOOK_URL` env-scoped | repo-level secret | See above — an approval gate in front of a failure alert is backwards. |
+| 14.32 | `checkov -d .` scans the Terraform root | **`-d . --var-file envs/<env>/terraform.tfvars`** | Without a var-file checkov renders an environment-less config: every env-driven value is unresolved, so it scanned a shape neither environment deploys. It reported Key Vault public access as FAILED while PROD had already disabled it, and never evaluated the subnets at all (3 `CKV2_AZURE_31` findings invisible). The `environment` input now selects the scan envelope along with backend, tfvars and OIDC trust. |
+| 14.32 | Terraform modules inherit the root `versions.tf` | **each module declares its own `terraform {}` block** | `tflint --recursive` lints every module directory as a standalone root, where the root `versions.tf` is out of scope; all 12 modules failed `terraform_required_version` + `terraform_required_providers`, and tflint exits 2 on warnings. The gate had never passed since it landed. |
 
 ---
 

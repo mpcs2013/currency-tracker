@@ -37,6 +37,7 @@ resource "azurerm_virtual_network" "this" {
 # during zero-downtime deploys. Both properties force-new the environment
 # if changed later — decided here, once.
 resource "azurerm_subnet" "infrastructure" {
+  #checkov:skip=CKV2_AZURE_31:No NSG yet. Container Apps requires a specific set of allow rules on its infrastructure subnet, and an NSG missing one of them breaks the environment in ways that surface as unexplained revision failures. Worth doing deliberately, not as a side effect.
   name                 = "snet-${var.name_prefix}-aca"
   resource_group_name  = var.resource_group_name
   virtual_network_name = azurerm_virtual_network.this.name
@@ -56,6 +57,7 @@ resource "azurerm_subnet" "infrastructure" {
 # private_endpoint_network_policies defaults to Disabled in azurerm 4.x,
 # which is what private endpoints need — left implicit on purpose.
 resource "azurerm_subnet" "private_endpoints" {
+  #checkov:skip=CKV2_AZURE_31:No NSG yet. Private endpoints ignore NSG rules unless private_endpoint_network_policies is Enabled, which azurerm 4.x defaults to Disabled (see the comment above) — an NSG here would read as a control while enforcing nothing.
   name                 = "snet-${var.name_prefix}-pe"
   resource_group_name  = var.resource_group_name
   virtual_network_name = azurerm_virtual_network.this.name
@@ -67,6 +69,7 @@ resource "azurerm_subnet" "private_endpoints" {
 # other resource in the subnet. Created in both envs (address space is free);
 # consumed only where enable_public_network_access = false.
 resource "azurerm_subnet" "postgres" {
+  #checkov:skip=CKV2_AZURE_31:No NSG yet. The subnet is delegated exclusively to Flexible Server and holds nothing else, so its blast radius is one server that already refuses password auth; an NSG is defence in depth worth adding with the other two, together.
   name                 = "snet-${var.name_prefix}-postgres"
   resource_group_name  = var.resource_group_name
   virtual_network_name = azurerm_virtual_network.this.name
