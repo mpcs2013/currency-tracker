@@ -1,0 +1,20 @@
+# .trivyignore — the reviewed CVE allowlist for the container images scanned by
+# _reusable-trivy-scan.yml, between docker-build and acr-push in main-ci.
+#
+# EMPTY IS THE CORRECT DEFAULT, but the file must exist: trivy-action fails the
+# job outright with "cannot find ignorefile '.trivyignore'" when the path in
+# `trivyignores:` is missing. That error had failed every main-ci run since the
+# trunk pipeline landed, which is why no image pair has ever reached ACR.
+#
+# The gate is severity HIGH,CRITICAL with ignore-unfixed:true. So anything
+# listed below is a HIGH or CRITICAL *with a fix available* that a human chose
+# not to take. That is a deliberate acceptance of known-fixable risk — write it
+# down like one:
+#
+#   # CVE-2025-XXXXX — <package>: <why this image is not exposed to it>.
+#   # Accepted by <who>, revisit <YYYY-MM-DD>.
+#   CVE-2025-XXXXX
+#
+# Adding a line here to make a red build green, without that reasoning, is the
+# thing the file exists to prevent. Prefer bumping the base image or the
+# offending package; an entry here is the last resort, not the first.
