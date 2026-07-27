@@ -97,6 +97,19 @@ resource "azurerm_container_app" "api" {
 
       # Probes target the Phase 13.B health contract; gated until the real
       # image (which serves those paths) is deployed by 14.D.
+      #
+      # EVERY TIMING IS EXPLICIT ON PURPOSE. Omitting them does not mean
+      # "sensible platform defaults" — azurerm defaults `timeout` to 1 SECOND
+      # and readiness `success_count_threshold` to 3. Under those, the first
+      # real deploy never converged: /health/ready opens a Postgres connection
+      # and pings Redis, both of which acquire an Entra token over managed
+      # identity first, so the probe timed out 184 consecutive times, the
+      # replica never went Ready, and runningState sat at "Activating" until
+      # the deploy's health gate gave up. The container was healthy the whole
+      # time — it logged "Now listening on: http://[::]:8080" in 8 seconds.
+      #
+      # A defaulted probe is a probe nobody chose. Change these only against a
+      # measured p99 of the endpoint they poll.
       dynamic "liveness_probe" {
         for_each = var.health_probes_enabled ? [1] : []
 
@@ -104,6 +117,14 @@ resource "azurerm_container_app" "api" {
           transport = "HTTP"
           port      = var.target_port
           path      = "/health/live"
+
+          # /health/live is the `self` check: no dependencies, no I/O. It stays
+          # tight because a slow answer here really is a sick process — but not
+          # 1s tight, which would restart the container over a GC pause.
+          initial_delay           = 10
+          interval_seconds        = 10
+          timeout                 = 5
+          failure_count_threshold = 3
         }
       }
 
@@ -114,6 +135,20 @@ resource "azurerm_container_app" "api" {
           transport = "HTTP"
           port      = var.target_port
           path      = "/health/ready"
+
+          # Readiness is allowed to be slow: it does real dependency I/O, and
+          # the cold path (token acquisition + TLS + EF model build) is the
+          # slowest request this app will ever serve.
+          #
+          # success_count_threshold = 1 is the important one. The default of 3
+          # forces three consecutive passes 10s apart, adding 20s of dead time
+          # to every deploy for no signal — readiness is re-evaluated forever,
+          # so a fluke pass self-corrects on the next interval.
+          initial_delay           = 10
+          interval_seconds        = 15
+          timeout                 = 10
+          failure_count_threshold = 6
+          success_count_threshold = 1
         }
       }
     }
