@@ -2,6 +2,20 @@
 # (infrastructure_subnet_id, internal_load_balancer_enabled,
 # zone_redundancy_enabled) — this module is a bundle of permanent decisions.
 
+# Provider requirements for this directory. The root module pins the same
+# constraints in versions.tf; these are the floor a caller must satisfy, and
+# what tflint reads when --recursive lints this module as a standalone root.
+terraform {
+  required_version = ">= 1.15"
+
+  required_providers {
+    azurerm = {
+      source  = "hashicorp/azurerm"
+      version = "~> 4.0"
+    }
+  }
+}
+
 resource "azurerm_container_app_environment" "this" {
   name                = "cae-${var.name_prefix}"
   resource_group_name = var.resource_group_name

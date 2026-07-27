@@ -2,6 +2,20 @@
 # pipeline owns the image (ignore_changes below is the treaty). The system-
 # assigned identity minted here is the principal every 14.24 grant targets.
 
+# Provider requirements for this directory. The root module pins the same
+# constraints in versions.tf; these are the floor a caller must satisfy, and
+# what tflint reads when --recursive lints this module as a standalone root.
+terraform {
+  required_version = ">= 1.15"
+
+  required_providers {
+    azurerm = {
+      source  = "hashicorp/azurerm"
+      version = "~> 4.0"
+    }
+  }
+}
+
 resource "azurerm_container_app" "api" {
   name                         = "ca-${var.name_prefix}-api"
   resource_group_name          = var.resource_group_name

@@ -12,6 +12,20 @@
 # Entra-replication lookup that intermittently fails for just-created
 # managed identities ("principal does not exist in directory").
 
+# Provider requirements for this directory. The root module pins the same
+# constraints in versions.tf; these are the floor a caller must satisfy, and
+# what tflint reads when --recursive lints this module as a standalone root.
+terraform {
+  required_version = ">= 1.15"
+
+  required_providers {
+    azurerm = {
+      source  = "hashicorp/azurerm"
+      version = "~> 4.0"
+    }
+  }
+}
+
 data "azurerm_client_config" "current" {}
 
 locals {

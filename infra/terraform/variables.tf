@@ -11,10 +11,10 @@ variable "environment" {
   }
 }
 
-variable "location" {
-  description = "Azure region for environment resources (e.g. westeurope)."
-  type        = string
-}
+# No `location` variable: every module call in main.tf takes its region from
+# `data.azurerm_resource_group.env.location`. The resource group is created by
+# the manual bootstrap (docs/azure/bootstrap.md), so its region is authoritative
+# and a second declaration here could only ever disagree with it.
 
 variable "name_prefix" {
   description = "Short prefix for resource names, e.g. \"ct\" -> ca-ct-api."
