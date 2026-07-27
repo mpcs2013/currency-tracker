@@ -121,3 +121,37 @@ resource "azurerm_postgresql_flexible_server_database" "app" {
     prevent_destroy = true
   }
 }
+
+# Firewall — public posture only. A Flexible Server with publicNetworkAccess
+# Enabled and an EMPTY rule list is not "open", it is CLOSED: Azure denies every
+# connection. That is not a hypothetical. It is what the server shipped as, and
+# it stalled the first two UAT deploys — the Api's readiness probe hung on a TCP
+# connect to 5432 that was being dropped, timed out, and the revision never left
+# "Activating". Nothing logged, because nothing ever failed; it just never
+# answered.
+#
+# The private posture has no firewall surface at all (traffic arrives through
+# the delegated subnet), so both resources are absent there rather than empty.
+
+resource "azurerm_postgresql_flexible_server_firewall_rule" "azure_services" {
+  #checkov:skip=CKV2_AZURE_26:Checkov reads the start address and sees 0.0.0.0, which in a firewall rule normally means the internet. Here it is Azure's sentinel for "Azure-internal resources only" — the range is 0.0.0.0-0.0.0.0, not 0.0.0.0-255.255.255.255, and the internet cannot reach the server through it. Stated plainly, the residual exposure is real but bounded: resources in OTHER Azure tenants can also open a TCP connection. They get nothing — password_auth_enabled is false, so a connection without an Entra token for a registered administrator is refused at the protocol level. Narrowing this further needs the apps off the public endpoint entirely (VNet integration, as PROD already does), not a tighter CIDR.
+  count = !local.private && var.allow_azure_services ? 1 : 0
+
+  # 0.0.0.0-0.0.0.0 is not "all addresses" — it is Azure's documented sentinel
+  # for "any Azure-internal resource". The apps are the reason it is here: an
+  # external Container Apps environment egresses from a large, rotating pool of
+  # public IPs, so there is no address to pin.
+  name             = "AllowAzureServices"
+  server_id        = azurerm_postgresql_flexible_server.this.id
+  start_ip_address = "0.0.0.0"
+  end_ip_address   = "0.0.0.0"
+}
+
+resource "azurerm_postgresql_flexible_server_firewall_rule" "allowed" {
+  for_each = local.private ? {} : var.allowed_ip_ranges
+
+  name             = each.key
+  server_id        = azurerm_postgresql_flexible_server.this.id
+  start_ip_address = each.value.start_ip
+  end_ip_address   = each.value.end_ip
+}

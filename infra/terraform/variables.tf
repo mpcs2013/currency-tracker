@@ -37,6 +37,20 @@ variable "enable_public_network_access" {
   type        = bool
 }
 
+variable "postgres_allow_azure_services" {
+  description = "Admit Azure-internal traffic to Postgres (the 0.0.0.0 sentinel rule). Must be true wherever the apps reach the server over its public endpoint — a public server with no firewall rules refuses everything, silently. Pairs with enable_public_network_access: true in UAT, false in PROD where the delegated subnet carries the traffic instead."
+  type        = bool
+}
+
+variable "postgres_allowed_ip_ranges" {
+  description = "Named IPv4 ranges admitted to Postgres in addition to Azure services (e.g. an office range for psql). Empty by default: every range here is a hole in the perimeter that outlives whoever opened it."
+  type = map(object({
+    start_ip = string
+    end_ip   = string
+  }))
+  default = {}
+}
+
 variable "vnet_address_space" {
   description = "Address space for the environment VNet. UAT and PROD must not overlap (peering-safe)."
   type        = list(string)

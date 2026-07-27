@@ -16,6 +16,12 @@ postgres_zone_redundant = true
 # PROD has no public network access — private endpoints only (enforced in 14.G).
 enable_public_network_access = false
 
+# False, and it must stay false: PROD's Postgres is VNet-injected through the
+# delegated subnet, so there is no public endpoint for a firewall rule to guard.
+# The module skips both firewall resources in the private posture; this is the
+# explicit statement of intent rather than a default nobody chose.
+postgres_allow_azure_services = false
+
 # Environment VNet. Non-overlapping with UAT (10.20.0.0/16).
 vnet_address_space = ["10.30.0.0/16"]
 
