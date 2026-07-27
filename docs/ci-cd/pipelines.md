@@ -290,7 +290,18 @@ them can succeed. Record values in [`docs/azure/bootstrap.md`](../azure/bootstra
 | `SLACK_WEBHOOK_URL`                               | repo-level **secret**    | `notify` (both leaves)   | optional |
 | `NOTIFICATIONS_ENABLED`                           | repo-level **variable**  | `notify` kill-switch     | optional |
 | `SMOKE_TOKEN_RESOURCE`                            | `uat` env var            | smoke leg 3              | 14.47 ✅ |
-| `user` app role on the API app registration, assigned to `gh-deploy-uat` + admin consent | Entra ID | smoke leg 3 | **pending** |
+| `MSApi` configured as an API: `api://` identifier URI, `requestedAccessTokenVersion: 2`, an `access_as_user` scope, Azure CLI pre-authorised | Entra ID | smoke leg 3 | **pending** |
+
+**Corrected 2026-07-27.** This row used to read *"`user` app role on the API app
+registration, assigned to `gh-deploy-uat` + admin consent"*. That was wrong in
+both halves and sent two debugging sessions after a phantom:
+`MSApi` defines **no app roles at all**, so there was nothing to assign — and
+`/api/v1/rates/latest`, the endpoint smoke leg 3 calls, needs no role.
+`MapWolverineEndpoints(opts => opts.RequireAuthorizeOnAll())` applies the default
+authenticated-user policy; only `AdminIngestEndpoint` requires `admin`. The real
+prerequisite is that the registration was never configured as an API — see
+[`docs/azure/bootstrap.md`](../azure/bootstrap.md) §MSApi for the four settings
+and why `requestedAccessTokenVersion: 2` is the load-bearing one.
 
 The promotion pair:
 
