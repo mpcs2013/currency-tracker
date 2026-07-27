@@ -79,20 +79,33 @@ builder.Services.AddProblemDetails(options =>
 // what a `?? throw` inside the AddJwtBearer callback would do. Mirrors the
 // connection-string fail-fast in AddInfrastructure. (Audience is read in 11.5,
 // where it's first consumed, so its own fail-fast lands there.)
-var authAuthority =
-    builder.Configuration["Authentication:Authority"]
-    ?? throw new InvalidOperationException(
+// 14.46: IsNullOrWhiteSpace, not null. An empty string is a configuration
+// VALUE in .NET, so an appsettings "placeholder" would satisfy a null check and
+// disarm these guards — the Api would then boot green and reject every token at
+// request time. See docs/configuration.md.
+var authAuthority = builder.Configuration["Authentication:Authority"];
+
+if (string.IsNullOrWhiteSpace(authAuthority))
+{
+    throw new InvalidOperationException(
         "Authentication:Authority is not configured. The AppHost injects it as "
-            + "Authentication__Authority (Phase 11.3); non-Aspire hosts (including "
+            + "Authentication__Authority (Phase 11.3); Azure supplies it as a plain "
+            + "environment variable (Phase 14.43); non-Aspire hosts (including "
             + "integration tests) must set it explicitly."
     );
-var authAudience =
-    builder.Configuration["Authentication:Audience"]
-    ?? throw new InvalidOperationException(
+}
+
+var authAudience = builder.Configuration["Authentication:Audience"];
+
+if (string.IsNullOrWhiteSpace(authAudience))
+{
+    throw new InvalidOperationException(
         "Authentication:Audience is not configured. The AppHost injects it as "
-            + "Authentication__Audience (Phase 11.3); non-Aspire hosts (including "
+            + "Authentication__Audience (Phase 11.3); Azure supplies it as a plain "
+            + "environment variable (Phase 14.43); non-Aspire hosts (including "
             + "integration tests) must set it explicitly."
     );
+}
 builder
     .Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
