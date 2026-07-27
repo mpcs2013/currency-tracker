@@ -16,6 +16,14 @@ postgres_zone_redundant = false
 # UAT is reachable publicly but firewalled to known ranges (tightened in 14.G).
 enable_public_network_access = true
 
+# The firewall those "known ranges" refer to. It did not exist until now, and a
+# public Flexible Server with no rules denies everything — the Api's readiness
+# probe hung on a dropped connect to 5432 and UAT never converged. Azure-internal
+# is the only grain available: the Container Apps environment is external and
+# egresses from a rotating pool of ~160 public IPs, so there is no address to
+# pin. Password auth is off, so this opens a port, not an account.
+postgres_allow_azure_services = true
+
 # Environment VNet. Non-overlapping with PROD (10.30.0.0/16) so the two could
 # be peered later without renumbering. Subnets are derived in modules/network.
 vnet_address_space = ["10.20.0.0/16"]

@@ -95,6 +95,8 @@ module "postgres" {
   sku_name                     = var.postgres_sku_name
   zone_redundant               = var.postgres_zone_redundant
   enable_public_network_access = var.enable_public_network_access
+  allow_azure_services         = var.postgres_allow_azure_services
+  allowed_ip_ranges            = var.postgres_allowed_ip_ranges
   delegated_subnet_id          = module.network.postgres_subnet_id
   vnet_id                      = module.network.vnet_id
   tags                         = local.common_tags
