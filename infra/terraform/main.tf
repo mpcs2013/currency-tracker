@@ -13,6 +13,39 @@ locals {
   })
 }
 
+# 14.42 — the connection strings, composed from module outputs so nothing is
+# typed twice and nothing is hardcoded. No password appears because none
+# exists: Postgres is Entra-only (14.17) and Managed Redis has keys off
+# (14.18). The Username segment is the Entra ROLE name, which must equal the
+# principal_name each identity is registered under in modules/role-assignments.
+locals {
+  postgres_role_names = {
+    api    = "ca-api-identity"
+    worker = "ca-worker-identity"
+  }
+
+  connection_strings = merge(
+    {
+      # One per app: the role name differs, so the string differs.
+      for app, role in local.postgres_role_names :
+      "${app}-connectionstrings-currencytracker" => join(";", [
+        "Host=${module.postgres.fqdn}",
+        "Port=5432",
+        "Database=${module.postgres.database_name}",
+        "Username=${role}",
+        "SSL Mode=Require",
+        "Trust Server Certificate=false",
+      ])
+    },
+    {
+      # Shared: Managed Redis authenticates by object id, not by name, so one
+      # endpoint string serves both apps. Port is READ from the resource —
+      # AMR is 10000, not the 6380 the retired product used.
+      "connectionstrings-cache" = "${module.redis.hostname}:${module.redis.port}"
+    },
+  )
+}
+
 # Read (do not create) the environment resource group provisioned in 14.A.
 # This is the foundation's one live read: it proves provider auth, backend init,
 # and RG visibility on a clean `plan` without declaring any managed resource.
@@ -94,6 +127,7 @@ module "keyvault" {
   enable_public_network_access = var.enable_public_network_access
   private_endpoint_subnet_id   = module.network.private_endpoint_subnet_id
   vnet_id                      = module.network.vnet_id
+  secrets                      = local.connection_strings # ← 14.42
   tags                         = local.common_tags
 }
 
