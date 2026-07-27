@@ -33,7 +33,7 @@ jobs:
       # Every producer uploads `coverage-raw-*`; pattern-matching them means a
       # future test job joins the gate just by following the naming convention.
       - name: Download raw coverage
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           pattern: coverage-raw-*
           path: coverage
