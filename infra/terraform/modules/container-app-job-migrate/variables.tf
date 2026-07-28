@@ -19,7 +19,12 @@ variable "container_app_environment_id" {
 }
 
 variable "acr_login_server" {
-  description = "Registry login server the job pulls from via its system identity."
+  description = "Registry login server the job pulls from via the identity below."
+  type        = string
+}
+
+variable "identity_id" {
+  description = "Resource ID of the USER-assigned managed identity the job runs as, declared in the root module so its grants exist before this resource is created. User-assigned rather than system-assigned because a job provisions its revision at create time: a system-assigned identity is minted by the resource itself and so cannot already hold AcrPull or Key Vault Secrets User, which is what made the first apply fail. Also the value of the registry and secret `identity` fields, which take a resource ID here where a container app takes the literal \"System\"."
   type        = string
 }
 

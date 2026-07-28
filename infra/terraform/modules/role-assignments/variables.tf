@@ -9,7 +9,7 @@ variable "worker_principal_id" {
 }
 
 variable "migrate_principal_id" {
-  description = "Object ID of the schema-migration job's system-assigned identity (14.48, ADR 0018). A distinct principal because a Container Apps job cannot borrow another resource's system-assigned identity. Receives AcrPull, Key Vault Secrets User and a Postgres administrator registration — but no Redis grant, because it opens no cache connection."
+  description = "Object ID of the schema-migration job's USER-assigned identity (14.48, ADR 0018), read from the standalone identity resource in the root module rather than from the job. That is the whole point: these grants must exist before the job provisions, and a job's system-assigned identity would not exist until it did. Receives AcrPull, Key Vault Secrets User and a Postgres administrator registration — but no Redis grant, because it opens no cache connection."
   type        = string
 }
 

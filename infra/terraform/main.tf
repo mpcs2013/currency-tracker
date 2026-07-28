@@ -279,6 +279,30 @@ module "container_app_worker" {
   tags = local.common_tags
 }
 
+# 14.48 — the migration job's identity, deliberately NOT declared inside
+# modules/container-app-job-migrate, and deliberately USER-assigned while both
+# apps are system-assigned.
+#
+# A system-assigned identity is minted BY the resource that uses it, so its
+# grants cannot precede its creation. That is survivable for the two container
+# apps (they bootstrap in two passes, as their modules document) but not here: a
+# Container Apps job provisions a revision at CREATE time, pulling the image and
+# resolving Key Vault references before any grant exists. The first apply of
+# this job failed exactly there — "Failed to provision revision ... Operation
+# expired", after a 20-minute poll.
+#
+# Hoisting the identity out breaks the cycle: it exists first, role_assignments
+# grants it, and the job attaches it. It cannot live in the job module, because
+# role_assignments would then depend on the very module that has to depend on
+# role_assignments. One apply, repeatable on a clean tenant — which matters
+# because deploy-uat runs `terraform apply` unattended.
+resource "azurerm_user_assigned_identity" "migrate" {
+  name                = "id-${var.name_prefix}-migrate"
+  resource_group_name = data.azurerm_resource_group.env.name
+  location            = data.azurerm_resource_group.env.location
+  tags                = local.common_tags
+}
+
 # 14.48 (ADR 0018) — the schema-migration job. Runs on demand, immediately
 # before a deploy updates the revisions, and never on a schedule. It carries no
 # cache secret: unlike the Worker (whose AddInfrastructure fail-fast forces the
@@ -292,10 +316,11 @@ module "container_app_job_migrate" {
   location                     = data.azurerm_resource_group.env.location
   container_app_environment_id = module.container_apps_env.id
   acr_login_server             = module.acr.login_server
+  identity_id                  = azurerm_user_assigned_identity.migrate.id
 
-  # Same flip, same reason, as the two apps — safe because the AcrPull grant
-  # below has propagated. On a FRESH environment this is a two-pass apply:
-  # false with empty key_vault_secrets first, then true.
+  # No two-pass bootstrap here, unlike the apps: the identity above already
+  # holds AcrPull and Key Vault Secrets User by the time this resource is
+  # created, because depends_on forces that order.
   use_acr_registry = true
 
   key_vault_secrets = {
@@ -313,9 +338,21 @@ module "container_app_job_migrate" {
   env_vars = {
     DOTNET_ENVIRONMENT        = "Production"
     Azure__UseManagedIdentity = "true"
+
+    # ApplicationDataSource builds a bare DefaultAzureCredential, which resolves
+    # the SYSTEM-assigned identity unless this names the user-assigned one. The
+    # job has no system-assigned identity at all, so without this line the token
+    # request fails and every connection is refused — with a message about
+    # managed identity that says nothing about which one.
+    AZURE_CLIENT_ID = azurerm_user_assigned_identity.migrate.client_id
   }
 
   tags = local.common_tags
+
+  # The grants must exist before the job provisions its revision. Terraform sees
+  # no data dependency between them — the job consumes the identity, not the
+  # role assignments — so the ordering has to be stated.
+  depends_on = [module.role_assignments]
 }
 
 # 14.24 — the least-privilege ledger: everything the workload identities
@@ -327,8 +364,10 @@ module "role_assignments" {
   worker_principal_id = module.container_app_worker.principal_id
 
   # 14.48 — the migration job's identity. Third Postgres administrator; no
-  # Redis grant, because it opens no cache connection.
-  migrate_principal_id = module.container_app_job_migrate.principal_id
+  # Redis grant, because it opens no cache connection. Read from the standalone
+  # identity resource, not from the job module — that is what lets these grants
+  # be created BEFORE the job that needs them.
+  migrate_principal_id = azurerm_user_assigned_identity.migrate.principal_id
 
   acr_id                       = module.acr.id
   key_vault_id                 = module.keyvault.id

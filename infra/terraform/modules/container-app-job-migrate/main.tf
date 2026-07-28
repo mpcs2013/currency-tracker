@@ -14,10 +14,15 @@
 #    schema. Concurrent migration is the failure this forbids outright.
 #  - replica_retry_limit = 0. A half-applied migration must not be retried into
 #    a second partial application; a human reads the logs instead.
-#  - Its OWN system-assigned identity, and therefore a THIRD Postgres
-#    administrator registration in modules/role-assignments. A Container Apps
-#    job cannot borrow another resource's system-assigned identity, so "reuse
-#    the Worker's" was never available — see that module's ledger entry.
+#  - A USER-assigned identity, passed in, while both container apps use
+#    system-assigned ones. Not a style choice: a job provisions its revision at
+#    CREATE time, so a system-assigned identity — minted by this very resource —
+#    could not hold the AcrPull and Key Vault grants the provisioning needs. The
+#    first apply died there after a 20-minute poll. The identity is declared in
+#    the root module so it can be granted first; see the comment on
+#    azurerm_user_assigned_identity.migrate for why it cannot live here.
+#    It is a THIRD Postgres administrator either way — a job cannot borrow
+#    another resource's identity, so "reuse the Worker's" was never available.
 #  - args = ["--migrate"], appended to the image ENTRYPOINT. The runtime image
 #    is chiseled and has no shell, so an args override is the only mechanism
 #    available; there is no `sh -c` to fall back on.
@@ -51,7 +56,8 @@ resource "azurerm_container_app_job" "migrate" {
   replica_retry_limit        = 0
 
   identity {
-    type = "SystemAssigned"
+    type         = "UserAssigned"
+    identity_ids = [var.identity_id]
   }
 
   manual_trigger_config {
@@ -59,12 +65,14 @@ resource "azurerm_container_app_job" "migrate" {
     replica_completion_count = 1
   }
 
+  # `identity` here takes the user-assigned identity's RESOURCE ID, where the
+  # container apps pass the literal "System". Same field, different grammar.
   dynamic "registry" {
     for_each = var.use_acr_registry ? [1] : []
 
     content {
       server   = var.acr_login_server
-      identity = "System"
+      identity = var.identity_id
     }
   }
 
@@ -74,7 +82,7 @@ resource "azurerm_container_app_job" "migrate" {
     content {
       name                = secret.key
       key_vault_secret_id = secret.value
-      identity            = "System"
+      identity            = var.identity_id
     }
   }
 

@@ -37,10 +37,13 @@ locals {
   # asymmetry the Worker already has.
   #
   # It exists as a separate principal rather than reusing the Worker's because a
-  # Container Apps job cannot borrow another resource's system-assigned
-  # identity. The map key is load-bearing: principal_name below derives
-  # "ca-migrate-identity" from it, and that string must equal the Username
-  # segment of the connection string built in the root module.
+  # Container Apps job cannot borrow another resource's identity, and it is
+  # USER-assigned (declared in the root module) rather than system-assigned so
+  # that these grants can be created BEFORE the job that needs them — a job
+  # provisions its revision at create time and pulls its image then. The map key
+  # is load-bearing: principal_name below derives "ca-migrate-identity" from it,
+  # and that string must equal the Username segment of the connection string
+  # built in the root module.
   app_principals = {
     api     = var.api_principal_id
     worker  = var.worker_principal_id

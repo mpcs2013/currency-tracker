@@ -8,7 +8,6 @@ output "name" {
   value       = azurerm_container_app_job.migrate.name
 }
 
-output "principal_id" {
-  description = "Object ID of the system-assigned identity — the principal modules/role-assignments registers as a Postgres administrator and grants AcrPull and Key Vault Secrets User."
-  value       = azurerm_container_app_job.migrate.identity[0].principal_id
-}
+# No principal_id output. The identity is user-assigned and declared in the root
+# module, which is where modules/role-assignments reads it from — exporting it
+# back out of here would reintroduce the dependency cycle this design removed.
