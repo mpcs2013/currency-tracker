@@ -304,10 +304,17 @@ resource "azurerm_user_assigned_identity" "migrate" {
 }
 
 # 14.48 (ADR 0018) — the schema-migration job. Runs on demand, immediately
-# before a deploy updates the revisions, and never on a schedule. It carries no
-# cache secret: unlike the Worker (whose AddInfrastructure fail-fast forces the
-# value to be present), this process exits before any hosted service starts, so
-# the lazy cache factory is never touched.
+# before a deploy updates the revisions, and never on a schedule.
+#
+# It carries the cache connection string for exactly the reason the Worker block
+# below states: AddInfrastructure() fail-fasts on a missing
+# ConnectionStrings__cache in EVERY host, at builder-configuration time. This
+# job first shipped without it, on the theory that a process which exits before
+# any hosted service starts never touches the lazy cache factory. True, and
+# irrelevant — the guard runs at Program.cs's AddInfrastructure() call, long
+# before that. The execution died there with
+# "ConnectionStrings__cache is not configured". Present and never used, as in
+# the Worker; still no Redis grant, because it still opens no connection.
 module "container_app_job_migrate" {
   source = "./modules/container-app-job-migrate"
 
@@ -325,10 +332,12 @@ module "container_app_job_migrate" {
 
   key_vault_secrets = {
     "connectionstrings-currencytracker" = module.keyvault.secret_versionless_ids["migrate-connectionstrings-currencytracker"]
+    "connectionstrings-cache"           = module.keyvault.secret_versionless_ids["connectionstrings-cache"]
   }
 
   secret_env_vars = {
     "ConnectionStrings__currencytracker" = "connectionstrings-currencytracker"
+    "ConnectionStrings__cache"           = "connectionstrings-cache"
   }
 
   # DOTNET_ENVIRONMENT matches the Worker's, not the Api's ASPNETCORE_
