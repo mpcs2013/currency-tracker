@@ -1,0 +1,159 @@
+# _reusable-db-migrate.yml — apply the database schema before the new revision
+# goes live, by starting the environment's Container Apps migration job on a
+# pinned image DIGEST and blocking until the execution reaches a terminal state.
+#
+# Why a job and not `dotnet ef database update` on the runner: PROD Postgres has
+# no public endpoint (VNet-injected, private DNS), and neither deploy identity is
+# a registered Postgres administrator — the server is Entra-only. Both blockers
+# are independent, and neither is fixable from a runner without widening posture.
+# The job runs INSIDE the Container Apps environment as its own identity, which
+# modules/role-assignments registers as an administrator. See ADR 0018.
+#
+# This applies BOTH halves of the schema: EF Core migrations and Wolverine's
+# durability tables (created locally by AddResourceSetupOnStartup, which is
+# Development-only). The Worker image carries the entrypoint; `--migrate` is
+# baked into the job's args by Terraform, not passed from here.
+#
+# Fails closed. A non-Succeeded execution fails the caller before any revision
+# is updated — the ordering that stops a green apply from being followed by an
+# Api that 500s on every query.
+# Callers: deploy-uat.yml, deploy-prod.yml.
+name: _reusable-db-migrate
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        description: GitHub Environment (uat | prod).
+        type: string
+        required: true
+      image-tag:
+        description: Image tag whose migrations to apply (the commit SHA). Resolved
+          to a digest before the job is started, so the execution cannot drift onto
+          a retagged image.
+        type: string
+        required: true
+      assert-recent-backup:
+        description: Refuse to migrate unless the server has a completed backup in
+          the last 26 hours. True for PROD, where a bad migration is recovered by
+          restore and nothing else; false for UAT, which is disposable.
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  migrate:
+    name: migrate (${{ inputs.environment }})
+    runs-on: ubuntu-latest
+    # Comfortably above the job's own replica_timeout_in_seconds (1800s), so a
+    # migration that hits ITS ceiling reports that verdict rather than being
+    # cut off here with no status at all.
+    timeout-minutes: 45
+    environment: ${{ inputs.environment }}
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Azure login (OIDC)
+        uses: azure/login@v3
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      # Schema rollback is not an operation. Image rollback is one digest swap
+      # (ADR 0015); a migration that commits is undone only by restoring. So
+      # PROD refuses to start one without a recent restore point to fall back
+      # to. geo_redundant_backup_enabled is off with a recorded reason, which
+      # makes the automated daily backup the whole safety net — worth asserting
+      # rather than assuming.
+      - name: Assert a recent backup exists
+        if: inputs.assert-recent-backup
+        shell: bash
+        env:
+          RG: ${{ vars.AZURE_RESOURCE_GROUP }}
+        run: |
+          set -euo pipefail
+
+          server=$(az postgres flexible-server list -g "$RG" --query "[0].name" -o tsv)
+          latest=$(az postgres flexible-server backup list \
+                     -g "$RG" -n "$server" \
+                     --query "max_by(@, &completedTime).completedTime" -o tsv)
+
+          if [ -z "$latest" ] || [ "$latest" = "None" ]; then
+            echo "::error::No completed backup found for ${server}; refusing to migrate PROD."
+            exit 1
+          fi
+
+          age_hours=$(( ( $(date -u +%s) - $(date -u -d "$latest" +%s) ) / 3600 ))
+          echo "latest backup: ${latest} (${age_hours}h old)"
+
+          if [ "$age_hours" -gt 26 ]; then
+            echo "::error::Latest ${server} backup is ${age_hours}h old (>26h); refusing to migrate PROD."
+            exit 1
+          fi
+
+      - name: Apply schema and gate on the execution verdict
+        shell: bash
+        env:
+          RG: ${{ vars.AZURE_RESOURCE_GROUP }}
+          TAG: ${{ inputs.image-tag }}
+        run: |
+          set -euo pipefail
+
+          job=$(az containerapp job list -g "$RG" \
+                  --query "[?ends_with(name, '-migrate')].name | [0]" -o tsv)
+          if [ -z "$job" ]; then
+            echo "::error::No *-migrate Container Apps job in ${RG}. Apply Terraform first."
+            exit 1
+          fi
+
+          # Pin by digest, not by tag. The Worker image is the one that carries
+          # the migrate entrypoint. Resolving here means the execution runs the
+          # exact bits this deploy is shipping, even if the tag moves.
+          acr=$(az acr list -g "$RG" --query "[0].name" -o tsv)
+          login_server=$(az acr list -g "$RG" --query "[0].loginServer" -o tsv)
+          digest=$(az acr manifest show-metadata \
+                     --registry "$acr" --name "worker:${TAG}" --query digest -o tsv)
+          image="${login_server}/worker@${digest}"
+          echo "migration image: ${image}"
+
+          # `update` then `start`, rather than `start --image`: it keeps the
+          # job's recorded image equal to what last ran, which is what you want
+          # when reading this back during an incident. Terraform ignore_changes
+          # means this does not fight the next plan.
+          az containerapp job update -n "$job" -g "$RG" --image "$image" --output none
+
+          execution=$(az containerapp job start -n "$job" -g "$RG" --query name -o tsv)
+          echo "execution: ${execution}"
+
+          # Poll to a terminal state. `job start` returns as soon as the
+          # execution is queued, so without this the deploy would race the
+          # schema it depends on.
+          status="Unknown"
+          for _ in $(seq 1 120); do
+            status=$(az containerapp job execution show \
+                       -n "$job" -g "$RG" --job-execution-name "$execution" \
+                       --query properties.status -o tsv 2>/dev/null || echo "Unknown")
+            case "$status" in
+              Succeeded|Failed|Cancelled) break ;;
+            esac
+            sleep 15
+          done
+
+          echo "final status: ${status}"
+
+          if [ "$status" != "Succeeded" ]; then
+            echo "::error::Schema migration ${execution} ended as ${status}; deploy not attempted."
+            # Diagnostics are best-effort: a CLI flag drift here must not mask
+            # the real failure above.
+            az containerapp job logs show \
+              -n "$job" -g "$RG" --container migrate \
+              --execution "$execution" --tail 200 || \
+              echo "::warning::Could not stream job logs; query the ContainerAppConsoleLogs_CL table for execution ${execution}."
+            exit 1
+          fi
+
+          echo "schema migration ${execution} succeeded"

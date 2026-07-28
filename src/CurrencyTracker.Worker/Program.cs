@@ -10,6 +10,7 @@ using CurrencyTracker.Infrastructure;
 using CurrencyTracker.Infrastructure.Persistence; // ApplicationDataSource (14.44)
 using CurrencyTracker.ServiceDefaults;
 using CurrencyTracker.Worker.Configuration;
+using CurrencyTracker.Worker.Migrations; // 14.48: migrate-and-exit (ADR 0018)
 using CurrencyTracker.Worker.Scheduling;
 using JasperFx; // RunJasperFxCommands (from 12.1)
 using JasperFx.Resources; // AddResourceSetupOnStartup (see version note)
@@ -182,8 +183,29 @@ if (builder.Environment.IsDevelopment())
 //var host = builder.Build();
 //host.Run();
 
+var host = builder.Build();
+
+// 14.48 (ADR 0018) — migrate-and-exit. A Container Apps job runs THIS image
+// with `--migrate` before the new revision goes live, because neither Azure
+// environment can be migrated from a CI runner: PROD Postgres has no public
+// endpoint, and the deploy identities are not database administrators. The
+// check is ahead of RunJasperFxCommands because `--migrate` is not a JasperFx
+// verb; an inexact flag falls through and is rejected there, which is the
+// intended failure — never a normal host started inside a job.
+if (SchemaMigrator.IsRequested(args))
+{
+    using var migrationCancellation = new CancellationTokenSource();
+    Console.CancelKeyPress += (_, eventArgs) =>
+    {
+        eventArgs.Cancel = true;
+        migrationCancellation.Cancel();
+    };
+
+    return await SchemaMigrator.RunAsync(host, migrationCancellation.Token);
+}
+
 // Forward args to the JasperFx command line so the `describe` / `codegen`
 // verbs work in this host, exactly as Phase 5.9 did for the Api. With no
 // command argument this behaves identically to host.Run() — the AppHost
 // launches the Worker with no args, so production startup is unchanged.
-return await builder.Build().RunJasperFxCommands(args);
+return await host.RunJasperFxCommands(args);

@@ -37,15 +37,22 @@ the audience `SMOKE_TOKEN_RESOURCE` requests a token for.
 | Field | Value |
 | ----- | ----- |
 | App (client) ID | `e50b769e-1b9e-487d-baf5-7108f98935f2` |
-| Object ID       | `6424a67b-d03b-4174-a7a7-f86e5b754bd3` |
-| Service principal object ID | `6424a67b-d03b-4174-a7a7-f86e5b754bd3` |
+| **Application** object ID | `f5914113-53a9-4d31-96bc-2d96c6751525` |
+| **Service principal** object ID | `6424a67b-d03b-4174-a7a7-f86e5b754bd3` |
 | `appRoleAssignmentRequired` | `false` |
 
-**It shipped bare and must be configured before any authenticated call
-succeeds** — discovered 2026-07-27 while trying to call
-`/api/v1/rates/latest` by hand. As created it had no `identifierUris`, no
-`oauth2PermissionScopes`, no `preAuthorizedApplications`, no `appRoles`, and
-`requestedAccessTokenVersion` unset:
+> **Both rows said `6424a67b-…` until 2026-07-28.** They are never the same
+> value: `az ad app show --id <client-id> --query id` returns the application
+> object, `az ad sp show` returns the service principal. Graph
+> `PATCH /applications/{id}` takes the **application** object id, so every call
+> aimed at the SP's id 404s. Resolve both live rather than trusting this table.
+
+**Configured 2026-07-28 — this section previously said it was blocking.** It
+shipped bare, discovered 2026-07-27 while trying to call `/api/v1/rates/latest`
+by hand: no `identifierUris`, no `oauth2PermissionScopes`, no
+`preAuthorizedApplications`, no `appRoles`, and `requestedAccessTokenVersion`
+unset. The four settings below are now applied and verified end to end — an
+unauthenticated call returns 401, an authenticated one reaches the handler.
 
 | Setting | Required value | Why |
 | ------- | -------------- | --- |
@@ -57,6 +64,25 @@ succeeds** — discovered 2026-07-27 while trying to call
 A `PATCH` to `api` replaces the whole object, so set the scope and the
 pre-authorized app in that order and reuse the same scope `id` in both calls —
 the second call otherwise silently erases the first.
+
+**Two calls are mandatory; merging them does not work.** The obvious
+simplification — one `PATCH` carrying the scope *and* its pre-authorization —
+is rejected outright:
+
+```
+InvalidValue: Property api.preAuthorizedApplications.delegatedPermissionIds
+has a Permission Id that cannot be found in the AppPermissions sets.
+```
+
+Graph validates `delegatedPermissionIds` against **persisted** scopes, not
+against the ones in the same request. So: call 1 sets
+`requestedAccessTokenVersion` + `oauth2PermissionScopes`; call 2 re-sends both
+*and* adds `preAuthorizedApplications`. The re-send is what survives the
+whole-object replace.
+
+The scope id in use is `9faf0955-99b2-4f50-b516-b022ce99a54d`. PowerShell mangles
+inline JSON — `\"` is not an escape there, and `az` sees the body split into
+separate arguments — so write the body to a file and pass `--body "@<path>"`.
 
 Fetching a token afterwards:
 

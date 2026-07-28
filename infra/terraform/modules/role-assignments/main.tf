@@ -29,9 +29,22 @@ terraform {
 data "azurerm_client_config" "current" {}
 
 locals {
+  # 14.48 — `migrate` is the schema-migration job (ADR 0018). It is in this map
+  # because it needs all three of the grants below: AcrPull to pull the image it
+  # runs, Key Vault Secrets User to resolve its connection string, and a
+  # Postgres administrator registration to apply DDL. It is deliberately NOT in
+  # the Redis assignment further down — it opens no cache connection, the same
+  # asymmetry the Worker already has.
+  #
+  # It exists as a separate principal rather than reusing the Worker's because a
+  # Container Apps job cannot borrow another resource's system-assigned
+  # identity. The map key is load-bearing: principal_name below derives
+  # "ca-migrate-identity" from it, and that string must equal the Username
+  # segment of the connection string built in the root module.
   app_principals = {
-    api    = var.api_principal_id
-    worker = var.worker_principal_id
+    api     = var.api_principal_id
+    worker  = var.worker_principal_id
+    migrate = var.migrate_principal_id
   }
 }
 

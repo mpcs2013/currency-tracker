@@ -19,9 +19,14 @@ locals {
 # (14.18). The Username segment is the Entra ROLE name, which must equal the
 # principal_name each identity is registered under in modules/role-assignments.
 locals {
+  # 14.48 — `migrate` joins the two apps here, which is what generates its
+  # own `migrate-connectionstrings-currencytracker` vault secret. The job
+  # authenticates as its own Entra role because a Container Apps job cannot
+  # borrow another resource's system-assigned identity (ADR 0018).
   postgres_role_names = {
-    api    = "ca-api-identity"
-    worker = "ca-worker-identity"
+    api     = "ca-api-identity"
+    worker  = "ca-worker-identity"
+    migrate = "ca-migrate-identity"
   }
 
   connection_strings = merge(
@@ -274,13 +279,56 @@ module "container_app_worker" {
   tags = local.common_tags
 }
 
-# 14.24 — the least-privilege ledger: everything the two workload identities
+# 14.48 (ADR 0018) — the schema-migration job. Runs on demand, immediately
+# before a deploy updates the revisions, and never on a schedule. It carries no
+# cache secret: unlike the Worker (whose AddInfrastructure fail-fast forces the
+# value to be present), this process exits before any hosted service starts, so
+# the lazy cache factory is never touched.
+module "container_app_job_migrate" {
+  source = "./modules/container-app-job-migrate"
+
+  name_prefix                  = var.name_prefix
+  resource_group_name          = data.azurerm_resource_group.env.name
+  location                     = data.azurerm_resource_group.env.location
+  container_app_environment_id = module.container_apps_env.id
+  acr_login_server             = module.acr.login_server
+
+  # Same flip, same reason, as the two apps — safe because the AcrPull grant
+  # below has propagated. On a FRESH environment this is a two-pass apply:
+  # false with empty key_vault_secrets first, then true.
+  use_acr_registry = true
+
+  key_vault_secrets = {
+    "connectionstrings-currencytracker" = module.keyvault.secret_versionless_ids["migrate-connectionstrings-currencytracker"]
+  }
+
+  secret_env_vars = {
+    "ConnectionStrings__currencytracker" = "connectionstrings-currencytracker"
+  }
+
+  # DOTNET_ENVIRONMENT matches the Worker's, not the Api's ASPNETCORE_
+  # equivalent — this is the Worker image, and a job that resolved a different
+  # configuration than the host it migrates for would be migrating the wrong
+  # database with the right credentials.
+  env_vars = {
+    DOTNET_ENVIRONMENT        = "Production"
+    Azure__UseManagedIdentity = "true"
+  }
+
+  tags = local.common_tags
+}
+
+# 14.24 — the least-privilege ledger: everything the workload identities
 # may touch, one grant per line, scoped to single resources.
 module "role_assignments" {
   source = "./modules/role-assignments"
 
   api_principal_id    = module.container_app_api.principal_id
   worker_principal_id = module.container_app_worker.principal_id
+
+  # 14.48 — the migration job's identity. Third Postgres administrator; no
+  # Redis grant, because it opens no cache connection.
+  migrate_principal_id = module.container_app_job_migrate.principal_id
 
   acr_id                       = module.acr.id
   key_vault_id                 = module.keyvault.id

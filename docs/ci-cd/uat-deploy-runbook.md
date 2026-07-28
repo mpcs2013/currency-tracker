@@ -17,37 +17,26 @@ does not do](#what-this-pipeline-deliberately-does-not-do).
 
 ## 0. Pre-flight
 
-Four conditions decide whether a dispatch can succeed.
+Four conditions decide whether a dispatch can succeed. The first two were
+blockers and are now resolved; the last two are standing constraints.
 
-### Blocking: `MSApi` is not configured as an API
+### Resolved 2026-07-28: `MSApi` is configured as an API
 
-Smoke leg 3 requests a token for `SMOKE_TOKEN_RESOURCE` and calls
-`/api/v1/rates/latest`. That variable **is** set on the `uat` environment, so the
-leg runs — and because `deploy-uat.yml` sets `strict: true`, a failed smoke leg
-is a **failed deploy**, not a warning. It fails at the *last* step, after
-Terraform has applied and both apps have been updated.
+**This section described a blocker for one day. It is applied.** All four
+settings are on the registration — `identifierUris`, `requestedAccessTokenVersion: 2`,
+an `access_as_user` scope, and Azure CLI pre-authorised. The values, and the
+Graph ordering trap in applying them, are in
+[`../azure/bootstrap.md`](../azure/bootstrap.md) §MSApi. The **application**
+object id is `f5914113-53a9-4d31-96bc-2d96c6751525`; the `6424a67b-…` this file
+used to print is the service principal's, and no `PATCH` aimed at it will work.
 
-No token can be issued for this API today. Verified by trying it:
+What it looked like before, for recognition: `az login --scope
+"api://e50b769e-…/access_as_user"` failed with `AADSTS500011: The resource
+principal … was not found in the tenant`, because with no `identifierUris` the
+string named nothing Entra could resolve. A `--resource` request failed
+differently, with `AADSTS65001`, because nothing was consented.
 
-```
-az account get-access-token --resource e50b769e-1b9e-487d-baf5-7108f98935f2
-→ AADSTS65001: The user or administrator has not consented to use the
-  application with ID '04b07795-...' named 'Microsoft Azure CLI'.
-```
-
-App registration `MSApi` was created bare: no `identifierUris`, no
-`oauth2PermissionScopes`, no `preAuthorizedApplications`, and
-`requestedAccessTokenVersion` unset (which means **v1**). Two independent
-blockers — nothing to request a token *for*, and the wrong token version even if
-there were. `Program.cs` sets `ValidIssuer = authAuthority`, an exact match
-against `…/v2.0`, so a v1 token's `sts.windows.net` issuer 401s before the
-audience is even examined.
-
-The four settings, and the ordering trap in applying them, are in
-[`../azure/bootstrap.md`](../azure/bootstrap.md) §MSApi. Object id
-`6424a67b-d03b-4174-a7a7-f86e5b754bd3`.
-
-Once applied, this is the call — `--scope` (v2), never `--resource` (v1):
+This is the call — `--scope` (v2), never `--resource` (v1):
 
 ```powershell
 $token = az account get-access-token `
@@ -80,6 +69,32 @@ $p = $p.PadRight($p.Length + (4 - $p.Length % 4) % 4, '=')
 > and only `AdminIngestEndpoint` requires `admin`. The `user` / `admin` roles
 > [`../auth.md`](../auth.md) recommends are still worth having for the admin
 > endpoint; they were simply never what blocked this.
+
+### What the first authenticated call actually returned
+
+Worth knowing, because the next person will run the snippet above and see it.
+With a valid token, `/api/v1/rates/latest` returned **500**, and
+`/api/v1/rates/history` returned 500 as well:
+
+```
+Npgsql.PostgresException 42P01: relation "rate_snapshots" does not exist
+  at GetLatestRatesHandler.cs:53
+```
+
+The UAT database had **no schema at all** — no migration had ever been applied
+in Azure. ADR 0004 said "Phase 14's deploy pipeline applies migrations once,
+before the new revision goes live"; that step was never built. 14.48 builds it
+(`_reusable-db-migrate.yml`, ADR 0018), so a dispatch now applies the schema
+between Terraform and the deploy.
+
+Read the failures this way:
+
+| Response to an authenticated call | Means |
+| --- | --- |
+| 401 | Token problem. Decode it — `iss` and `aud`, above. Not the Api. |
+| 403 on `/admin/ingest` | **Correct.** The token carries no `admin` role. A 200 here would be the finding. |
+| 500 with `42P01` | Schema missing. The migrate job did not run, or ran against a different database. |
+| 200 or 404 | Auth and schema are both fine. 404 just means nothing has been ingested yet. |
 
 ### The other three
 

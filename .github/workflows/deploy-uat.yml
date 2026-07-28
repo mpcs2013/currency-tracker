@@ -94,12 +94,33 @@ jobs:
       environment: uat
       apply: true
 
+  # 14.48 (ADR 0018) — schema before revisions, never after. Terraform runs
+  # first because a fresh environment's migration job is created by it; the
+  # deploy runs last because it must not put a revision in front of a schema
+  # that was never applied. A failure here is a failed deploy with nothing
+  # moved, which is the cheap end of the failure spectrum.
+  migrate:
+    name: migrate
+    needs: [gate, terraform]
+    if: always() && needs.gate.result == 'success' && needs.terraform.result != 'failure'
+    uses: ./.github/workflows/_reusable-db-migrate.yml
+    permissions:
+      contents: read
+      id-token: write
+    with:
+      environment: uat
+      image-tag: ${{ needs.gate.outputs.image-tag }}
+
   deploy:
     name: deploy
-    needs: [gate, terraform]
-    # `always()` + an explicit failure check, so skipping the optional terraform
-    # job does not skip the deploy.
-    if: always() && needs.gate.result == 'success' && needs.terraform.result != 'failure'
+    needs: [gate, terraform, migrate]
+    # `always()` + explicit checks, so skipping the optional terraform job does
+    # not skip the deploy. `migrate` is required, not merely non-failing: it is
+    # skipped only if an upstream job it needs failed.
+    if: >-
+      always() && needs.gate.result == 'success'
+      && needs.terraform.result != 'failure'
+      && needs.migrate.result == 'success'
     uses: ./.github/workflows/_reusable-azure-deploy.yml
     permissions:
       contents: read
@@ -114,7 +135,7 @@ jobs:
   # upstream failed, hence always(). needs.*.result captures skipped too.
   record:
     name: record
-    needs: [gate, terraform, deploy]
+    needs: [gate, terraform, migrate, deploy]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -129,6 +150,7 @@ jobs:
             echo "image-tag:  ${{ needs.gate.outputs.image-tag || inputs.image-tag }}"
             echo "gate:       ${{ needs.gate.result }}"
             echo "terraform:  ${{ needs.terraform.result }}"
+            echo "migrate:    ${{ needs.migrate.result }}"
             echo "deploy:     ${{ needs.deploy.result }}"
             echo "actor:      ${{ github.actor }}"
             echo "ref:        ${{ github.ref }}"
@@ -148,7 +170,7 @@ jobs:
   # would park the message telling you UAT broke behind an approval gate.
   notify:
     name: notify
-    needs: [gate, terraform, deploy]
+    needs: [gate, terraform, migrate, deploy]
     if: failure() && vars.NOTIFICATIONS_ENABLED == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 5
