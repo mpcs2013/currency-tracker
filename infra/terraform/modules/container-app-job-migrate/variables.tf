@@ -53,7 +53,7 @@ variable "env_vars" {
 }
 
 variable "secret_env_vars" {
-  description = "Secret-backed environment variables (name => container-app secret name). Carries ConnectionStrings__currencytracker; the job needs no cache connection because it never opens one."
+  description = "Secret-backed environment variables (name => container-app secret name). Must carry BOTH ConnectionStrings__currencytracker and ConnectionStrings__cache. The cache one is not optional even though this job never opens a cache connection: AddInfrastructure() fail-fasts on its absence at builder-configuration time, before any hosted service starts, so a job without it dies at startup with \"ConnectionStrings__cache is not configured\". Same present-and-unused arrangement the Worker has."
   type        = map(string)
   default     = {}
 }
