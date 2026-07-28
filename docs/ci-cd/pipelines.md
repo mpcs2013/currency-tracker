@@ -47,13 +47,15 @@ graph LR
   Human[manual dispatch: image-tag] --> U[deploy-uat.yml]
   U --> UG[gate: verify tag exists in ACR]
   UG --> TFU[_reusable-terraform: uat, apply]
-  TFU --> DEPU[_reusable-azure-deploy: uat, strict=true]
+  TFU --> MIGU[_reusable-db-migrate: uat]
+  MIGU --> DEPU[_reusable-azure-deploy: uat, strict=true]
   DEPU --> UR[record 90d / notify on failure]
 
   Tag[git tag v*] --> P[deploy-prod.yml]
   P -.->|reviewer + wait, per job| TFP[_reusable-terraform: prod, apply]
   TFP --> PROM[promote: az acr import by digest, UAT -> PROD]
-  PROM --> DEPP[_reusable-azure-deploy: prod, http-smoke=false]
+  PROM --> MIGP[_reusable-db-migrate: prod, backup asserted]
+  MIGP --> DEPP[_reusable-azure-deploy: prod, http-smoke=false]
   DEPP --> PRREC[record 90d / notify on failure]
 ```
 
@@ -131,6 +133,12 @@ filter. Adding, renaming or removing a job in `ci.yml` now means editing that
 - **Deploys gate themselves.** `deploy-uat` requires a human dispatch and
   verifies the artifact exists before touching Azure; `deploy-prod` sits behind
   the `prod` environment's reviewer, wait timer, and `main`+`v*` branch policy.
+- **The schema gates the revision.** `_reusable-db-migrate` runs between
+  Terraform (UAT) or promote (PROD) and the deploy, and a non-`Succeeded` job
+  execution fails the run with **nothing deployed**. This ordering is the whole
+  point: before 14.48 an apply could go green and the Api would then 500 on
+  every query against a database that had no tables. Detection was never the
+  gap — the smoke leg already caught it, at the most expensive possible moment.
 
 ## Failure playbook
 
@@ -151,8 +159,8 @@ filter. Adding, renaming or removing a job in `ci.yml` now means editing that
 | `ci.yml`           | `pull_request`, `push` to `main`, dispatch         | PR gate: format, test+coverage, CodeQL, the two isolated integration suites, gitleaks, dependency-review |
 | `terraform-pr.yml` | `pull_request` on `infra/**`                       | Full IaC gate (UAT, plan only) + sticky plan comment                                                 |
 | `main-ci.yml`      | `push` to `main` (not `**.md` / `docs/**`)         | Certify the merge commit; build, Trivy-gate, and push `api:<sha>` / `worker:<sha>` to the UAT ACR    |
-| `deploy-uat.yml`   | `workflow_dispatch` (image-tag)                    | Verify the artifact, apply UAT, deploy that SHA, smoke                                                |
-| `deploy-prod.yml`  | `push` tags `v*`                                   | Behind the `prod` gate: apply PROD, promote by digest from the UAT ACR, deploy, control-plane verdict |
+| `deploy-uat.yml`   | `workflow_dispatch` (image-tag)                    | Verify the artifact, apply UAT, migrate the schema, deploy that SHA, smoke                            |
+| `deploy-prod.yml`  | `push` tags `v*`                                   | Behind the `prod` gate: apply PROD, promote by digest from the UAT ACR, migrate the schema, deploy, control-plane verdict |
 | `claude.yml`       | issue / review comments containing `@claude`       | Agent assist; unrelated to the delivery path                                                         |
 
 `ci.yml` still carries `push: branches: [main]`. Both it and `main-ci.yml` then
@@ -175,6 +183,7 @@ saying so.
 | `_reusable-acr-push.yml`          | OIDC → `az acr login` → push; outputs the digest                                                         | `image-name`, `tag`, `environment`                         |
 | `_reusable-terraform.yml`         | fmt/init/validate/tflint/checkov/plan[/apply] over `ARM_*` OIDC; checkov scans with the env's tfvars     | `working-dir`, `environment`, `apply`                      |
 | `_reusable-azure-deploy.yml`      | `az containerapp update --image` both apps → revision-health poll → smoke; strictness ladder             | `environment`, `image-tag`, `strict`, `http-smoke`         |
+| `_reusable-db-migrate.yml`        | starts the environment's Container Apps migration job on a pinned digest, polls to a terminal state      | `environment`, `image-tag`, `assert-recent-backup`         |
 
 ### Why the test work is split three ways
 
@@ -290,7 +299,20 @@ them can succeed. Record values in [`docs/azure/bootstrap.md`](../azure/bootstra
 | `SLACK_WEBHOOK_URL`                               | repo-level **secret**    | `notify` (both leaves)   | optional |
 | `NOTIFICATIONS_ENABLED`                           | repo-level **variable**  | `notify` kill-switch     | optional |
 | `SMOKE_TOKEN_RESOURCE`                            | `uat` env var            | smoke leg 3              | 14.47 ✅ |
-| `MSApi` configured as an API: `api://` identifier URI, `requestedAccessTokenVersion: 2`, an `access_as_user` scope, Azure CLI pre-authorised | Entra ID | smoke leg 3 | **pending** |
+| `MSApi` configured as an API: `api://` identifier URI, `requestedAccessTokenVersion: 2`, an `access_as_user` scope, Azure CLI pre-authorised | Entra ID | smoke leg 3 | 14.48 ✅ |
+
+**Applied 2026-07-28.** All four settings are now on the registration and a
+delegated token verifies against the deployed Api: `iss` ends `/v2.0`, `aud` is
+the bare client-id GUID, `ver` is `2.0`, `scp` is `access_as_user`. The
+unauthenticated call returns 401 and the authenticated one reaches the handler.
+See [`docs/azure/bootstrap.md`](../azure/bootstrap.md) §MSApi for the values and
+the Graph ordering trap.
+
+> **Still unverified: the leg's own token.** Smoke leg 3 requests
+> `SMOKE_TOKEN_RESOURCE` with `--resource` as the `gh-deploy-uat` **service
+> principal** — a client-credentials flow. `preAuthorizedApplications` is a
+> delegated-flow mechanism and does nothing for it. The verification above used
+> `--scope` as a user. The first `deploy-uat` dispatch is what settles it.
 
 **Corrected 2026-07-27.** This row used to read *"`user` app role on the API app
 registration, assigned to `gh-deploy-uat` + admin consent"*. That was wrong in
@@ -339,6 +361,7 @@ Where this implementation departs from the Phase 14.D plan, and why.
 | 14.26 | Dockerfile `HEALTHCHECK` | omitted | Container Apps ignores it, and the chiseled base ships no shell or curl to run one. Health is the platform probe seam. |
 | 14.39 | `SLACK_WEBHOOK_URL` env-scoped | repo-level secret | See above — an approval gate in front of a failure alert is backwards. |
 | 14.32 | `checkov -d .` scans the Terraform root | **`-d . --var-file envs/<env>/terraform.tfvars`** | Without a var-file checkov renders an environment-less config: every env-driven value is unresolved, so it scanned a shape neither environment deploys. It reported Key Vault public access as FAILED while PROD had already disabled it, and never evaluated the subnets at all (3 `CKV2_AZURE_31` findings invisible). The `environment` input now selects the scan envelope along with backend, tfvars and OIDC trust. |
+| 14.48 | Phase 14's deploy pipeline applies migrations "once, before the new revision goes live" (ADR 0004) | **never built at all, until now** | The step was recorded as a Phase 14 deliverable in ADR 0004 and Phase 14 closed without it. No workflow referenced `dotnet ef`; `MigrationRunner` is Development-only and both Azure environments run the `Production` profile. Found 2026-07-28 when the first authenticated call to UAT returned 500 with `42P01: relation "rate_snapshots" does not exist` — the database had no schema at all, and never had. `_reusable-db-migrate.yml` + `modules/container-app-job-migrate` are the implementation; ADR 0018 records why it is a Container Apps job and not a runner step. |
 | 14.32 | Terraform modules inherit the root `versions.tf` | **each module declares its own `terraform {}` block** | `tflint --recursive` lints every module directory as a standalone root, where the root `versions.tf` is out of scope; all 12 modules failed `terraform_required_version` + `terraform_required_providers`, and tflint exits 2 on warnings. The gate had never passed since it landed. |
 
 ---

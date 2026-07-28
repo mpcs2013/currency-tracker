@@ -16,7 +16,13 @@ signing key, with a 30-second clock skew. See ADR `0010-oidc-jwt-auth.md`.
 | `GET /api/v1/rates/latest`    | any authenticated caller         |
 | `GET /api/v1/rates/history`   | any authenticated caller         |
 | `POST /admin/ingest`          | the `admin` role (policy "admin")|
-| `/health`, `/alive`           | anonymous (liveness/readiness)   |
+| `/health/live`, `/health/ready` | anonymous (liveness/readiness) |
+
+> `/health` and `/alive` are the **Development-only** pair from
+> `ServiceDefaults/Extensions.cs` — that method guards them with
+> `app.Environment.IsDevelopment()`. Deployed, the paths are `/health/live` and
+> `/health/ready` (`Api/Program.cs`), which is what the container-app probes and
+> the deploy smoke legs call. This table named the dev pair until 14.48.
 
 ## Getting a token via curl (local Keycloak, dev only)
 
@@ -110,12 +116,20 @@ ADR 0010 is intact.
   touches auth), and then rejecting **every** token with a generic
   issuer-validation failure. With the guard it dies at startup naming both
   values, the revision never goes healthy, and `strict: true` fails the deploy.
-- **App roles are still required, and are still not automatic.** Expose `user`
-  and `admin` app roles on the API app registration, or every token
-  authenticates and no token authorises. The deploy identity also needs one
-  assigned (plus admin consent) before the authenticated smoke leg can obtain a
-  token — until then `az account get-access-token --resource <audience>` returns
-  `AADSTS500011` and the leg skips.
+- **App roles are needed for `/admin/ingest` only, and are still not
+  automatic.** Expose `user` and `admin` app roles on the API app registration
+  if you want the admin endpoint reachable. The two read endpoints need **no
+  role** — `RequireAuthorizeOnAll()` applies the default authenticated-user
+  policy, and a role-less token is correctly answered with 403 by
+  `/admin/ingest` and 200 by `/api/v1/rates/latest`.
+
+  > **Corrected 14.48.** This bullet used to claim the deploy identity needed an
+  > app-role assignment before a token could be obtained, and that
+  > `AADSTS500011` was the symptom of the missing assignment. Both halves were
+  > wrong. `AADSTS500011` is *resource principal not found* — it was raised
+  > because `MSApi` had no `identifierUris`, so `api://<client-id>` resolved to
+  > nothing. Configuring the registration as an API fixed it with no app role
+  > anywhere. See `docs/azure/bootstrap.md` §MSApi.
 
 ## Security posture (Phase 11.12 review)
 

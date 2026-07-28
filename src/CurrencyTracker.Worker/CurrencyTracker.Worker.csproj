@@ -18,6 +18,10 @@
     </ItemGroup>
 
     <ItemGroup>
+        <InternalsVisibleTo Include="CurrencyTracker.Worker.UnitTests" />
+    </ItemGroup>
+
+    <ItemGroup>
         <ProjectReference Include="..\CurrencyTracker.Application\CurrencyTracker.Application.csproj" />
         <ProjectReference Include="..\CurrencyTracker.Infrastructure\CurrencyTracker.Infrastructure.csproj" />
         <ProjectReference Include="..\CurrencyTracker.Domain\CurrencyTracker.Domain.csproj" />

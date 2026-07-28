@@ -9,9 +9,11 @@
 # addressing the source by DIGEST pins content rather than a movable tag.
 #
 # NOTE: each prod job pends for reviewer approval + the wait timer as it reaches
-# the environment, so a release is three approvals. The approvals are the point;
-# the wait timer is the knob if it grates. The seams (apply / promote / deploy)
-# are separately re-runnable, which one mega-job would trade away for one click.
+# the environment, so a release is four approvals (14.48 added the schema
+# migration). The approvals are the point; the wait timer is the knob if it
+# grates. The seams (apply / promote / migrate / deploy) are separately
+# re-runnable, which one mega-job would trade away for one click — and the
+# migrate seam is the one you most want re-runnable on its own.
 name: deploy-prod
 
 on:
@@ -98,9 +100,26 @@ jobs:
               --force
           done
 
+  # 14.48 (ADR 0018) — after promote, because the job runs the PROD registry's
+  # copy of the Worker image and that copy does not exist until the import
+  # completes. Before deploy, because a revision must never front a schema that
+  # was not applied. Same mechanism as UAT; PROD adds the backup assertion,
+  # since here a bad migration is recovered by restore and nothing else.
+  migrate:
+    name: migrate
+    needs: promote
+    uses: ./.github/workflows/_reusable-db-migrate.yml
+    permissions:
+      contents: read
+      id-token: write
+    with:
+      environment: prod
+      image-tag: ${{ github.sha }}
+      assert-recent-backup: true
+
   deploy:
     name: deploy
-    needs: promote
+    needs: migrate
     uses: ./.github/workflows/_reusable-azure-deploy.yml
     permissions:
       contents: read
@@ -114,7 +133,7 @@ jobs:
 
   record:
     name: record
-    needs: [terraform, promote, deploy]
+    needs: [terraform, promote, migrate, deploy]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -129,6 +148,7 @@ jobs:
             echo "commit:     ${{ github.sha }}"
             echo "terraform:  ${{ needs.terraform.result }}"
             echo "promote:    ${{ needs.promote.result }}"
+            echo "migrate:    ${{ needs.migrate.result }}"
             echo "deploy:     ${{ needs.deploy.result }}"
             echo "actor:      ${{ github.actor }}"
           } | tee deploy-summary.txt
@@ -142,7 +162,7 @@ jobs:
 
   notify:
     name: notify
-    needs: [terraform, promote, deploy]
+    needs: [terraform, promote, migrate, deploy]
     if: failure() && vars.NOTIFICATIONS_ENABLED == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 5

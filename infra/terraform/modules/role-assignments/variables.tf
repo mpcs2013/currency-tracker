@@ -8,6 +8,11 @@ variable "worker_principal_id" {
   type        = string
 }
 
+variable "migrate_principal_id" {
+  description = "Object ID of the schema-migration job's system-assigned identity (14.48, ADR 0018). A distinct principal because a Container Apps job cannot borrow another resource's system-assigned identity. Receives AcrPull, Key Vault Secrets User and a Postgres administrator registration — but no Redis grant, because it opens no cache connection."
+  type        = string
+}
+
 variable "acr_id" {
   description = "Registry resource ID — AcrPull scope."
   type        = string
