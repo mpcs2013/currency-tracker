@@ -95,7 +95,7 @@
         <!-- ServiceDefaults (13.1) -->
         <PackageVersion Include="Serilog.Sinks.Seq" Version="9.1.0" />
         <!-- Api -->
-        <PackageVersion Include="Scalar.AspNetCore" Version="2.16.16" />
+        <PackageVersion Include="Scalar.AspNetCore" Version="2.16.17" />
         <!-- Test -->
         <PackageVersion Include="Scriban.Signed" Version="7.2.5" />
         <!-- Test -->
