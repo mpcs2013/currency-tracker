@@ -98,6 +98,11 @@
         <PackageVersion Include="Scalar.AspNetCore" Version="2.16.18" />
         <!-- Test -->
         <PackageVersion Include="Scriban.Signed" Version="7.2.5" />
+        <!-- Security pin: forces transitive SSH.NET (via Testcontainers) off
+             vulnerable 2025.1.0 (GHSA-q939-rpr3-3284 / CVE-2026-48798, path
+             traversal in ScpClient.Download). Drop once Testcontainers ships a
+             release that depends on 2026.0.0 or later itself. -->
+        <PackageVersion Include="SSH.NET" Version="2026.0.0" />
         <!-- Test -->
         <PackageVersion Include="Testcontainers.PostgreSql" Version="4.13.0" />
         <!-- Test -->
