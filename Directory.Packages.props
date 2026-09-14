@@ -82,7 +82,7 @@
         <!-- Aspire -->
         <PackageVersion Include="OpenTelemetry.Instrumentation.Runtime" Version="1.17.0" />
         <!-- Worker -->
-        <PackageVersion Include="Quartz" Version="3.18.2" />
+        <PackageVersion Include="Quartz" Version="4.1.0" />
         <!-- Worker -->
         <PackageVersion Include="Quartz.Extensions.Hosting" Version="3.18.2" />
         <!-- ServiceDefaults (13.1) — bundles Serilog core, Console sink,
