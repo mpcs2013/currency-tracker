@@ -29,6 +29,13 @@ vnet_address_space = ["10.30.0.0/16"]
 # = true above). Burstable + HA is an apply-time error.
 postgres_sku_name = "GP_Standard_D2s_v3"
 
+# 14.60 — PROD is never parked. It holds no resources today (it has never been
+# applied), so there is nothing here to save; and the day it does hold them,
+# "production, but scaled to zero with no cache" is not a state anyone should
+# be able to reach by editing a tfvars line. Stated explicitly rather than
+# defaulted, like every other environment-shape flag in this file.
+hibernated = false
+
 # REVIEW BEFORE THE FIRST PROD APPLY. Standard/C1 died with Azure Cache for
 # Redis; this is a like-for-like guess at its replacement, not a costed choice.
 # high_availability_enabled is what buys the replica + SLA that "Standard" used
