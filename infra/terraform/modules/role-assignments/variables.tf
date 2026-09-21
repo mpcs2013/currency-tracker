@@ -24,8 +24,9 @@ variable "key_vault_id" {
 }
 
 variable "managed_redis_id" {
-  description = "Managed Redis resource ID — access-policy assignment target."
+  description = "Managed Redis resource ID — access-policy assignment target. null where the environment is hibernated (14.60) and no cache exists: the assignment is then skipped entirely rather than pointed at a dangling id. Nothing else in this module reads it, so a null here costs the Api its cache grant and nothing more."
   type        = string
+  default     = null
 }
 
 variable "postgres_server_name" {
