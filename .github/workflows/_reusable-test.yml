@@ -69,10 +69,9 @@ jobs:
                 continue ;;
             esac
             found=$((found + 1))
-            dotnet test "$proj" -c ${{ inputs.configuration }} --no-build \
-              --collect:"XPlat Code Coverage" \
-              --settings coverlet.runsettings \
-              --results-directory "${{ github.workspace }}/coverage"
+            dotnet test --project "$proj" -c ${{ inputs.configuration }} --no-build \
+              --results-directory "${{ github.workspace }}/coverage" \
+              -- --coverlet
           done
           if [ "$found" -eq 0 ]; then
             echo "::error::No test projects matched tests/**/*.csproj — the discovery glob is broken."
@@ -87,5 +86,10 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: coverage-raw-unit
-          path: coverage/**/coverage.cobertura.xml
+          # coverlet.MTP timestamps every report it writes
+          # (coverage.cobertura.<ddMMyyHHmmssfff>.xml), which is what lets the
+          # seven projects in the loop above share one results directory without
+          # overwriting each other. The glob has to allow for the timestamp; the
+          # fixed coverage.cobertura.xml this used to match no longer exists.
+          path: coverage/**/*cobertura*.xml
           retention-days: 1

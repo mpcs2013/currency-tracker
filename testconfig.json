@@ -1,0 +1,13 @@
+{
+  "platformOptions": {
+    "Coverlet": {
+      "include": "[CurrencyTracker.*]*",
+      "exclude": "[coverlet.*]*",
+      "excludeByAttribute": "Obsolete,GeneratedCodeAttribute,CompilerGeneratedAttribute,ExcludeFromCodeCoverageAttribute",
+      "excludeByFile": "**/*.g.cs,**/*.generated.cs",
+      "format": "cobertura",
+      "skipAutoProps": true,
+      "includeTestAssembly": false
+    }
+  }
+}

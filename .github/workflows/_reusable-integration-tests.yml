@@ -68,15 +68,15 @@ jobs:
 
       - name: Test ${{ inputs.project }}
         run: >
-          dotnet test ${{ inputs.project }}
+          dotnet test --project ${{ inputs.project }}
           --configuration ${{ inputs.configuration }} --no-build
-          --collect:"XPlat Code Coverage"
-          --settings coverlet.runsettings
           --results-directory ${{ github.workspace }}/coverage
+          -- --coverlet
 
       - name: Upload raw coverage
         uses: actions/upload-artifact@v7
         with:
           name: ${{ inputs.coverage-artifact }}
-          path: coverage/**/coverage.cobertura.xml
+          # Timestamped by coverlet.MTP — see _reusable-test.yml.
+          path: coverage/**/*cobertura*.xml
           retention-days: 1
