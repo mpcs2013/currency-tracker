@@ -32,6 +32,23 @@ vnet_address_space = ["10.20.0.0/16"]
 # HA — consistent with postgres_zone_redundant = false above.
 postgres_sku_name = "B_Standard_B1ms"
 
+# 14.60 — UAT is PARKED. Phase 14 closed, no issue is open, and nothing has
+# been deployed here since. The environment was billing CHF ~35/month to serve
+# nobody: CHF 17.74 of idle Container Apps vCPU + memory, CHF 13.96 for 744
+# hours of a cache with no client, CHF 3.05 for the environment's public IP
+# (which stays — it belongs to the Container Apps environment, and deleting
+# THAT is 14.58's teardown, not this). Postgres, the ACR and 32 GB of storage
+# are on the subscription's 12-month free services and cost nothing, which is
+# precisely why they are kept: they hold the schema and the images.
+#
+# To wake UAT for a deep test: flip this to false, `terraform apply`, run the
+# migration job, then dispatch deploy-uat with a SHA main-ci has pushed. The
+# cache comes back at a NEW hostname (modules/redis randomises the suffix), so
+# verify the `connectionstrings-cache` vault secret matches before smoking.
+#
+# Leave it false only while actually testing. Put it back.
+hibernated = true
+
 # Smallest cache that exercises the real code path. No SLA — acceptable in UAT.
 # Balanced_B0 is Azure Managed Redis's entry tier and costs materially more than
 # the retired Basic/C0 it replaces; there is no cheaper AMR option.

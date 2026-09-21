@@ -42,13 +42,33 @@ locals {
         "Trust Server Certificate=false",
       ])
     },
-    {
-      # Shared: Managed Redis authenticates by object id, not by name, so one
-      # endpoint string serves both apps. Port is READ from the resource —
-      # AMR is 10000, not the 6380 the retired product used.
-      "connectionstrings-cache" = "${module.redis.hostname}:${module.redis.port}"
+    # Shared: Managed Redis authenticates by object id, not by name, so one
+    # endpoint string serves both apps. Port is READ from the resource —
+    # AMR is 10000, not the 6380 the retired product used.
+    #
+    # Absent while hibernated, because the cache it addresses is absent. The
+    # alternative — keeping the secret and letting it hold a dead hostname —
+    # fails later, further from the cause, and against a value that LOOKS
+    # configured. Note the name is regenerated on wake: modules/redis suffixes
+    # it with a random string, so the cache never comes back at its old address.
+    var.hibernated ? {} : {
+      "connectionstrings-cache" = "${module.redis[0].hostname}:${module.redis[0].port}"
     },
   )
+
+  # The cache pair, folded into each app's secret maps only when a cache
+  # exists. Written once because all three consumers (Api, Worker, migrate job)
+  # take the identical conditional, and three copies is three chances to get it
+  # wrong. Empty while hibernated, which removes both the container-app secret
+  # and the env var that names it — a `secret_env_vars` entry pointing at a
+  # secret the app does not declare is an apply-time error, not a runtime one.
+  cache_secret = var.hibernated ? {} : {
+    "connectionstrings-cache" = module.keyvault.secret_versionless_ids["connectionstrings-cache"]
+  }
+
+  cache_secret_env = var.hibernated ? {} : {
+    "ConnectionStrings__cache" = "connectionstrings-cache"
+  }
 }
 
 # Read (do not create) the environment resource group provisioned in 14.A.
@@ -109,8 +129,15 @@ module "postgres" {
 
 # 14.18 — distributed cache (Phase 10 query slice; /health/ready dependency).
 # Entra auth on; private endpoint materialises only in the private posture.
+#
+# 14.60 — absent while hibernated. Managed Redis bills a flat hourly rate with
+# no scale-to-zero of any kind and no tier below Balanced_B0, so "park it" can
+# only mean "delete it". Everything downstream of this module is conditional on
+# the same flag: the cache connection string, the three apps' secret maps, and
+# the access-policy assignment in modules/role-assignments.
 module "redis" {
   source = "./modules/redis"
+  count  = var.hibernated ? 0 : 1
 
   name_prefix                  = var.name_prefix
   resource_group_name          = data.azurerm_resource_group.env.name
@@ -207,20 +234,25 @@ module "container_app_api" {
   # the revision fails with "Unable to get value using Managed identity".
   # Apply once empty, then again populated — the same bootstrap ordering as
   # use_acr_registry, and the reason PROD's first apply is two passes.
-  key_vault_secrets = {
+  key_vault_secrets = merge({
     "connectionstrings-currencytracker" = module.keyvault.secret_versionless_ids["api-connectionstrings-currencytracker"]
-    "connectionstrings-cache"           = module.keyvault.secret_versionless_ids["connectionstrings-cache"]
-  }
+  }, local.cache_secret)
 
   # The env var names are the double-underscore form of the configuration keys
   # Phase 8 and Phase 10 read: ConnectionStrings:currencytracker and :cache.
   # The container-app secret names are deliberately identical across both apps
   # even though the vault secrets differ — the app-side name is the app's
   # contract, the vault-side name is the vault's inventory.
-  secret_env_vars = {
+  secret_env_vars = merge({
     "ConnectionStrings__currencytracker" = "connectionstrings-currencytracker"
-    "ConnectionStrings__cache"           = "connectionstrings-cache"
-  }
+  }, local.cache_secret_env)
+
+  # 14.60 — zero replicas while hibernated. Idle vCPU + memory on the two apps
+  # was CHF 17.74 of August's CHF 37.12, spent serving nothing. The HTTP scale
+  # rule below is what wakes this one: at min 0 the first request through
+  # ingress activates a replica, so UAT stays addressable, it just answers the
+  # first caller slowly instead of costing money to answer nobody quickly.
+  min_replicas = var.hibernated ? 0 : 1
 
   # Non-secret configuration: identifiers and switches only.
   env_vars = {
@@ -261,15 +293,20 @@ module "container_app_worker" {
   # deliberately) and never opens a cache connection, so the value is present
   # and never used. 14.45's lazy ConnectionMultiplexerFactory is what makes
   # that asymmetry survivable rather than a boot failure.
-  key_vault_secrets = {
+  key_vault_secrets = merge({
     "connectionstrings-currencytracker" = module.keyvault.secret_versionless_ids["worker-connectionstrings-currencytracker"]
-    "connectionstrings-cache"           = module.keyvault.secret_versionless_ids["connectionstrings-cache"]
-  }
+  }, local.cache_secret)
 
-  secret_env_vars = {
+  secret_env_vars = merge({
     "ConnectionStrings__currencytracker" = "connectionstrings-currencytracker"
-    "ConnectionStrings__cache"           = "connectionstrings-cache"
-  }
+  }, local.cache_secret_env)
+
+  # 14.60 — zero replicas while hibernated, and unlike the Api this one does
+  # NOT come back on its own: the Worker has no ingress, so there is no HTTP
+  # scale rule to activate it. That is correct. Its job is scheduled ingestion
+  # and outbox relay against a database nobody is reading; waking it is an
+  # apply, not an accident.
+  min_replicas = var.hibernated ? 0 : 1
 
   env_vars = {
     DOTNET_ENVIRONMENT        = "Production"
@@ -330,15 +367,13 @@ module "container_app_job_migrate" {
   # created, because depends_on forces that order.
   use_acr_registry = true
 
-  key_vault_secrets = {
+  key_vault_secrets = merge({
     "connectionstrings-currencytracker" = module.keyvault.secret_versionless_ids["migrate-connectionstrings-currencytracker"]
-    "connectionstrings-cache"           = module.keyvault.secret_versionless_ids["connectionstrings-cache"]
-  }
+  }, local.cache_secret)
 
-  secret_env_vars = {
+  secret_env_vars = merge({
     "ConnectionStrings__currencytracker" = "connectionstrings-currencytracker"
-    "ConnectionStrings__cache"           = "connectionstrings-cache"
-  }
+  }, local.cache_secret_env)
 
   # DOTNET_ENVIRONMENT matches the Worker's, not the Api's ASPNETCORE_
   # equivalent — this is the Worker image, and a job that resolved a different
@@ -378,9 +413,15 @@ module "role_assignments" {
   # be created BEFORE the job that needs them.
   migrate_principal_id = azurerm_user_assigned_identity.migrate.principal_id
 
-  acr_id                       = module.acr.id
-  key_vault_id                 = module.keyvault.id
-  managed_redis_id             = module.redis.id
+  acr_id       = module.acr.id
+  key_vault_id = module.keyvault.id
+
+  # null while hibernated — there is no cache to grant against, and the module
+  # skips the access-policy assignment entirely. The Api's identity is
+  # unchanged, so waking up re-grants the same principal against the new cache.
+  managed_redis_id = var.hibernated ? null : module.redis[0].id
+
+
   postgres_server_name         = module.postgres.name
   postgres_resource_group_name = data.azurerm_resource_group.env.name
 
