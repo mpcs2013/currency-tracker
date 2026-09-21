@@ -93,7 +93,15 @@ resource "azurerm_postgresql_flexible_server_active_directory_administrator" "ap
 # single built-in access policy, so there is nothing to select. That also means
 # no object_id_alias, so this grant has no equivalent of the principal_type
 # hint above; a just-created identity may need a retry while Entra replicates.
+#
+# 14.60 — count, because a hibernated environment has no cache to grant
+# against. Same shape as promotion_acr_pull below: the caller passes null and
+# the grant leaves the plan, rather than the module needing to know what
+# hibernation is. The Api's principal is untouched either way, so waking up
+# re-grants the same identity against the newly created cache.
 resource "azurerm_managed_redis_access_policy_assignment" "api_data_contributor" {
+  count = var.managed_redis_id == null ? 0 : 1
+
   managed_redis_id = var.managed_redis_id
   object_id        = var.api_principal_id
 }
