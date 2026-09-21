@@ -1,0 +1,29 @@
+<Project>
+    <!-- Coverage configuration for every test project, linked from ONE file at
+         the repo root rather than copied into nine project folders. coverlet.MTP
+         reads testconfig.json from the directory holding the test assembly, so
+         the file has to reach each output folder; Link keeps the source of
+         truth singular.
+
+         This lives in Directory.Build.targets, NOT .props, and the distinction
+         is load-bearing: .props is imported before the project body, so
+         IsTestProject is still empty there and the condition below would never
+         fire. .targets is imported after Microsoft.NET.Test.Sdk has set it.
+
+         The `include` filter inside testconfig.json is the important part.
+         JasperFx/Wolverine ship PDBs alongside their assemblies, so coverlet
+         instruments them too: they contributed 21,911 of 26,145 coverable lines
+         (84%) at 23% covered, dragging the reported total to 33.4% while the
+         CurrencyTracker.* assemblies actually sat at 86.6%.
+
+         coverlet.MTP treats a config file as AUTHORITATIVE — it injects no
+         defaults when one is present — so every exclusion that used to arrive
+         for free from coverlet.collector is spelled out explicitly there. -->
+    <ItemGroup Condition="'$(IsTestProject)' == 'true'">
+        <None
+            Include="$(MSBuildThisFileDirectory)testconfig.json"
+            Link="testconfig.json"
+            CopyToOutputDirectory="Always"
+        />
+    </ItemGroup>
+</Project>

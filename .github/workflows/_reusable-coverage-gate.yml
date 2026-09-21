@@ -44,10 +44,10 @@ jobs:
       - name: Verify artifacts arrived
         shell: bash
         run: |
-          count=$(find coverage -name 'coverage.cobertura.xml' | wc -l)
+          count=$(find coverage -name '*cobertura*.xml' | wc -l)
           echo "Found $count raw Cobertura file(s)."
           if [ "$count" -eq 0 ]; then
-            echo "::error::No coverage.cobertura.xml files downloaded — the gate cannot run."
+            echo "::error::No Cobertura files downloaded — the gate cannot run."
             exit 1
           fi
 
@@ -55,7 +55,7 @@ jobs:
         run: |
           dotnet tool install -g dotnet-reportgenerator-globaltool
           reportgenerator \
-            -reports:"coverage/**/coverage.cobertura.xml" \
+            -reports:"coverage/**/*cobertura*.xml" \
             -targetdir:"coverage/report" \
             -reporttypes:"Cobertura;TextSummary;MarkdownSummaryGithub"
 

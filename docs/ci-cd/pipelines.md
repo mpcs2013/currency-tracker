@@ -202,6 +202,40 @@ merges them with ReportGenerator, and applies the floor once. Producers just
 have to name their artifact `coverage-raw-*`; a future test job joins the gate
 by following the convention.
 
+### How coverage is collected
+
+Every test project references **`coverlet.MTP`**, and both producing
+workflows enable it by passing `--coverlet` after the `--` separator:
+
+```
+dotnet test --project <proj> -c Release --no-build \n  --results-directory <dir> -- --coverlet
+```
+
+Three things about that line are load-bearing:
+
+- **`--project` is mandatory now.** In the MTP mode of `dotnet test`
+  (opted into by the `test.runner` key in `global.json`) a bare path
+  argument is no longer how you name a project.
+- **`--coverlet` goes after `--`.** Everything before the separator is a
+  `dotnet test` option; everything after is forwarded to the test
+  application, which is where the coverlet extension lives.
+- **The old VSTest flags are gone.** `--collect:"XPlat Code Coverage"`
+  and `--settings coverlet.runsettings` are rejected under MTP with exit
+  code 5 ("Zero tests ran"), which is a test *run* failure and not an
+  obviously-a-flag-problem failure. If you see exit code 5, suspect the
+  arguments before the tests.
+
+Filters live in `testconfig.json` at the repo root — one file, linked into
+every test project's output by `Directory.Build.targets`, replacing the
+`coverlet.runsettings` that served the VSTest collector. coverlet.MTP
+treats a config file as **authoritative** and injects no defaults when one
+is present, so every exclusion is spelled out there explicitly.
+
+Reports are named `coverage.cobertura.<ddMMyyHHmmssfff>.xml`. The timestamp
+is what lets the seven projects in the `_reusable-test.yml` loop share one
+results directory without overwriting each other, and it is why every glob
+in the three workflows matches `*cobertura*.xml` rather than a fixed name.
+
 Discovery in `_reusable-test.yml` is **exclusion-based on purpose**. An
 include-list would silently drop a newly added test project — the same failure
 mode as the pre-14.28 `has_csharp` gate, whose `compgen -G "**/*.csproj"` never
@@ -355,6 +389,7 @@ Where this implementation departs from the Phase 14.D plan, and why.
 | 14.28/14.35 | `_reusable-build.yml` as a build gate, called by `ci.yml` and `main-ci.yml` | **deleted** | Its restore + `dotnet build -c Release` is byte-identical to `_reusable-test.yml`'s first three steps, and the images compile from source in their own Dockerfiles. After the de-duplication it had zero callers; an uncalled reusable is the anti-pattern the library rule exists to prevent. |
 | 14.28 | `_reusable-test.yml` runs the whole solution and owns the coverage floor | **split three ways** | Container suites raced on Testcontainers ports when run alongside everything else; the floor moved to `_reusable-coverage-gate.yml` because no single job now sees all the coverage. |
 | 14.40 | Required list includes `build / build` | **`coverage / coverage`** | Follows from the two rows above. Swapped in the branch-protection API in the same change. |
+| 14.28 | `dotnet test` collects coverage with the VSTest collector (`--collect:"XPlat Code Coverage"` + `coverlet.runsettings`) | **MTP mode + `coverlet.MTP`** | Not a choice. xunit.v3 4.0 moves to Microsoft.Testing.Platform 2.x, and MTP 2.x removed the VSTest bridge on the .NET 10 SDK: the build fails outright with "Testing with VSTest target is no longer supported". `global.json` gains a `test.runner` key, the VSTest flags become `-- --coverlet`, `coverlet.runsettings` becomes `testconfig.json`, and every Cobertura glob has to tolerate coverlet.MTP's timestamped filenames. Coverage engine and numbers are unchanged — coverlet.MTP is the same coverlet at the same 10.0.1. ADR 0020. |
 | 14.40 | Required list names each job individually | **one `ci-gate` aggregate** | Naming jobs directly cannot survive the `changes` filter: a skipped reusable caller reports its bare name and never the composite the list requires, so every infra-only or doc-only PR waited forever on six checks that would never arrive (PR #388). `ci-gate` is a plain `if: always()` job that reports one name in both cases. Swapped in the branch-protection API in the same change. |
 | 14.34 | `terraform-pr` runs `_reusable-terraform` against the `uat` environment | **`uat-plan`, derived from `apply`** | `uat` is main-only by deployment-branch policy, so the plan job was refused before its first step on every PR branch — the workflow could never have worked as merged. Widening the policy would have let PR branches deploy; a plan-only environment lets them plan and leaves every apply path gated. |
 | 14.29 | `_reusable-docker-build.yml` takes a `push` input | dropped | Pushing is `_reusable-acr-push.yml`'s single responsibility; a `push` input here would let a caller bypass the Trivy gate. |
