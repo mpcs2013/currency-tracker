@@ -421,7 +421,6 @@ module "role_assignments" {
   # unchanged, so waking up re-grants the same principal against the new cache.
   managed_redis_id = var.hibernated ? null : module.redis[0].id
 
-
   postgres_server_name         = module.postgres.name
   postgres_resource_group_name = data.azurerm_resource_group.env.name
 
