@@ -122,7 +122,7 @@
         <!-- Api, Worker -->
         <PackageVersion Include="WolverineFx.RuntimeCompilation" Version="6.21.0" />
         <!-- Test -->
-        <PackageVersion Include="xunit.runner.visualstudio" Version="3.1.5" />
+        <PackageVersion Include="xunit.runner.visualstudio" Version="4.0.0" />
         <!-- Test -->
         <PackageVersion Include="xunit.v3" Version="3.2.2" />
     </ItemGroup>
