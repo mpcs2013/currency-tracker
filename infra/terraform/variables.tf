@@ -85,3 +85,8 @@ variable "promotion_pull_principal_id" {
   type        = string
   default     = null
 }
+
+variable "hibernated" {
+  description = "Park this environment to stop idle spend. true scales BOTH container apps to zero replicas and omits the Managed Redis cache entirely; those two line items are CHF ~32 of UAT's CHF ~35/month, and August's meters show every franc of it as idle (17.74 Container Apps idle vCPU+memory, 13.96 for 744 h of Balanced_B0 nobody connected to). The two knobs are coupled on purpose: a cache is the one resource here that cannot scale itself down, so parking the apps while it bills a full month saves half the money for all of the inconvenience. Nothing expensive to rebuild is touched — Postgres keeps its schema, the ACR keeps its images, Key Vault, the VNet, the identities and their grants all survive — so waking up is this flag back to false and one apply. A hibernated environment deliberately cannot serve traffic or run the migration job: the cache connection string does not exist, and AddInfrastructure() fail-fasts without it in every host. Loud at boot beats a silent half-environment."
+  type        = bool
+}
