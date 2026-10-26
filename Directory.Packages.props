@@ -58,7 +58,7 @@
        (GHSA-v5pm-xwqc-g5wc). Stay on 2.x — 3.x breaks .NET 10 built-in OpenAPI. -->
         <PackageVersion Include="Microsoft.OpenApi" Version="2.7.5" />
         <!-- MessagePack for serialization - AppHost -->
-        <PackageVersion Include="MessagePack" Version="3.1.8" />
+        <PackageVersion Include="MessagePack" Version="3.1.12" />
         <!-- Aspire -->
         <PackageVersion Include="Microsoft.Extensions.Http.Resilience" Version="10.8.0" />
         <!-- Aspire -->
@@ -122,8 +122,8 @@
         <!-- Api, Worker -->
         <PackageVersion Include="WolverineFx.RuntimeCompilation" Version="6.21.0" />
         <!-- Test -->
-        <PackageVersion Include="xunit.runner.visualstudio" Version="4.0.0" />
+        <PackageVersion Include="xunit.runner.visualstudio" Version="4.0.1" />
         <!-- Test -->
-        <PackageVersion Include="xunit.v3" Version="4.0.1" />
+        <PackageVersion Include="xunit.v3" Version="4.0.2" />
     </ItemGroup>
 </Project>
