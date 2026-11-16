@@ -50,7 +50,7 @@
         <!-- Infrastructure -->
         <PackageVersion
             Include="Microsoft.Extensions.Caching.StackExchangeRedis"
-            Version="10.0.12"
+            Version="11.0.0"
         />
         <!-- Worker -->
         <PackageVersion Include="Microsoft.Extensions.Hosting" Version="10.0.12" />
