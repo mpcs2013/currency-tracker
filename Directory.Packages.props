@@ -5,7 +5,7 @@
     </PropertyGroup>
     <ItemGroup>
         <!-- Test -->
-        <PackageVersion Include="Alba" Version="8.5.3" />
+        <PackageVersion Include="Alba" Version="9.0.0" />
         <!-- Aspire -->
         <PackageVersion Include="Aspire.Hosting.AppHost" Version="13.4.6" />
         <!-- Aspire (preview — Keycloak hosting has no stable 13.4.x; see ADR 0010) -->
